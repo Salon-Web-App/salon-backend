@@ -1,44 +1,47 @@
-// Creates (or updates) the single admin user from ADMIN_EMAIL /
-// ADMIN_PASSWORD in .env. Safe to re-run — it upserts, so running it again
-// after changing ADMIN_PASSWORD in .env will reset the password.
+// Creates the admin user from ADMIN_EMAIL / ADMIN_PASSWORD. Safe to re-run:
+// an existing admin is left untouched unless SEED_RESET_ADMIN_PASSWORD=true.
 //
-// Usage: npm run seed
-require('dotenv').config();
-const bcrypt = require('bcrypt');
-const { PrismaClient } = require('@prisma/client');
+// Usage: npm run db:seed
+if (process.env.NODE_ENV !== "production") require("dotenv").config();
+const bcrypt = require("bcryptjs");
+const { PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient();
 
 async function main() {
   const email = process.env.ADMIN_EMAIL;
   const password = process.env.ADMIN_PASSWORD;
+  const resetPassword = process.env.SEED_RESET_ADMIN_PASSWORD === "true";
 
   if (!email || !password) {
-    console.error('ADMIN_EMAIL and ADMIN_PASSWORD must be set in .env before seeding.');
-    process.exit(1);
+    throw new Error("ADMIN_EMAIL and ADMIN_PASSWORD must be set.");
+  }
+  if (password.length < 12) {
+    throw new Error("ADMIN_PASSWORD must be at least 12 characters.");
   }
 
-  if (password.length < 8) {
-    console.error('ADMIN_PASSWORD should be at least 8 characters.');
-    process.exit(1);
+  const existing = await prisma.adminUser.findUnique({ where: { email } });
+
+  if (existing && !resetPassword) {
+    console.log(`Admin ${email} already exists, leaving password unchanged.`);
+    return;
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
-
-  const admin = await prisma.adminUser.upsert({
+  const passwordHash = await bcrypt.hash(password, 12);
+  await prisma.adminUser.upsert({
     where: { email },
     update: { passwordHash },
-    create: { email, passwordHash, role: 'admin' },
+    create: { email, passwordHash, role: "admin" },
   });
 
-  console.log(`Admin user ready: ${admin.email} (id: ${admin.id})`);
+  console.log(
+    existing ? `Admin ${email} password reset.` : `Admin ${email} created.`,
+  );
 }
 
 main()
   .catch((err) => {
-    console.error('Seed failed:', err);
-    process.exit(1);
+    console.error("Seed failed:", err.message);
+    process.exitCode = 1;
   })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .finally(() => prisma.$disconnect());

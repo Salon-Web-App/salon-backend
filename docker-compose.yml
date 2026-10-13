@@ -63,6 +63,22 @@ services:
     volumes:
       - redisdata:/data
 
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    image: makeup-studio-app:local
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    command: npm run db:migrate
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["tools"]
+    restart: "no"
+
 volumes:
   pgdata:
   redisdata:

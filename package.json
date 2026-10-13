@@ -8,12 +8,11 @@
     "start": "node src/server.js",
     "worker": "node src/jobs/worker.js",
     "job": "node scripts/run-job.js",
-    "worker:notifications": "node src/jobs/worker.js",
-    "worker:completedBooking": "node src/jobs/markBookingsCompleted.js",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:generate": "prisma generate",
-    "prisma:studio": "prisma studio",
-    "seed": "node prisma/seed.js"
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:status": "prisma migrate status",
+    "db:seed": "node prisma/seed.js",
+    "db:studio": "prisma studio"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -21,7 +20,7 @@
   "dependencies": {
     "@adminjs/express": "^6.1.0",
     "@adminjs/prisma": "^5.0.4",
-    "@prisma/client": "^5.18.0",
+    "@prisma/client": "5.22.0",
     "adminjs": "^7.8.13",
     "bcryptjs": "^3.0.3",
     "bullmq": "^6.3.14",
@@ -50,6 +49,6 @@
     "@adminjs/bundler": "^3.0.0",
     "nodemon": "^3.1.4",
     "pino-pretty": "^13.2.0",
-    "prisma": "^5.18.0"
+    "prisma": "5.22.0"
   }
 }
