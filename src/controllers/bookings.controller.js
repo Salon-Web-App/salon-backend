@@ -74,10 +74,8 @@ async function create(req, res, next) {
       });
     }
     const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
-    console.log(serviceId, start, end);
 
     const staffs = await bookingService.availableStaff(serviceId, start, end);
-    console.log(staffs);
     if (!staffs || staffs.length === 0)
       return res.status(409).json({
         message: "No staff member is available for the selected time",

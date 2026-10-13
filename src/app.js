@@ -7,7 +7,9 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-const morgan = require("morgan");
+const { randomUUID } = require("node:crypto");
+const pinoHttp = require("pino-http");
+const logger = require("./lib/logger");
 
 const routes = require("./routes");
 const { errorHandler } = require("./middlewares/errorHandler.middleware");
@@ -55,7 +57,39 @@ async function buildApp() {
     express.json({ limit: "10mb" })(req, res, next);
   });
 
-  app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+  // One JSON log line per request, each with a request id. The id comes from
+  // the ALB's X-Amzn-Trace-Id when present, so app logs can be matched to
+  // ALB access logs; otherwise a fresh UUID. It's echoed back as
+  // X-Request-Id so a user reporting an error can quote it.
+  app.use(
+    pinoHttp({
+      logger,
+      genReqId: (req, res) => {
+        const id =
+          req.headers["x-request-id"] ||
+          req.headers["x-amzn-trace-id"] ||
+          randomUUID();
+        res.setHeader("X-Request-Id", id);
+        return id;
+      },
+      autoLogging: {
+        ignore: (req) => req.url === "/health" || req.url === "/ready",
+      },
+      customLogLevel: (req, res, err) => {
+        if (err || res.statusCode >= 500) return "error";
+        if (res.statusCode >= 400) return "warn";
+        return "info";
+      },
+      customSuccessMessage: (req, res) =>
+        `${req.method} ${req.originalUrl || req.url} ${res.statusCode}`,
+      customErrorMessage: (req, res) =>
+        `${req.method} ${req.originalUrl || req.url} ${res.statusCode}`,
+      serializers: {
+        req: (req) => ({ id: req.id, method: req.method, url: req.url }),
+        res: (res) => ({ statusCode: res.statusCode }),
+      },
+    }),
+  );
 
   const lifecycle = require("./lib/lifecycle");
 

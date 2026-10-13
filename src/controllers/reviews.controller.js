@@ -65,7 +65,6 @@ async function list(req, res, next) {
     }));
 
     res.json(formattedReviews);
-    console.log(formattedReviews);
   } catch (err) {
     next(err);
   }

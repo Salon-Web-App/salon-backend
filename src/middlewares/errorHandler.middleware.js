@@ -1,13 +1,26 @@
-// Last middleware in the chain (registered after all routes in app.js).
-// Catches anything thrown or passed to next(err) and returns a clean JSON
-// error instead of leaking stack traces to the client.
+// Last middleware in the chain. Logs the error once, at the right level,
+// with the request id, and returns a safe JSON body. 5xx responses include
+// the request id so a user report can be matched to the exact log line.
+const logger = require("../lib/logger");
+
 function errorHandler(err, req, res, next) {
-  console.error(err);
+  const status = err.status || err.statusCode || 500;
+  const log = req.log || logger;
 
-  const status = err.status || 500;
-  const message = err.expose ? err.message : 'Something went wrong. Please try again.';
+  if (status >= 500) {
+    log.error({ err }, "unhandled error");
+  } else {
+    log.warn({ status, message: err.message }, "request rejected");
+  }
 
-  res.status(status).json({ error: message });
+  if (res.headersSent) return next(err);
+
+  const body = {
+    error: err.expose ? err.message : "Something went wrong. Please try again.",
+  };
+  if (status >= 500 && req.id) body.requestId = req.id;
+
+  res.status(status).json(body);
 }
 
 module.exports = { errorHandler };

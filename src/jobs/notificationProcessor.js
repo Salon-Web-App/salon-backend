@@ -3,6 +3,7 @@
 const prisma = require("../lib/prisma");
 const { sendSms } = require("../lib/twilio");
 const { sendEmail } = require("../lib/brevo");
+const logger = require("../lib/logger");
 
 const TEMPLATES = {
   "booking.created": (b) => ({
@@ -56,10 +57,38 @@ async function processNotificationJob(job) {
 
   const { sms, subject, html } = template(booking);
 
-  await Promise.allSettled([
-    // sendSms(booking.customerPhone, sms),
-    sendEmail(booking.customerEmail, subject, html),
-  ]);
+  const attempts = [
+    ["sms", () => sendSms(booking.customerPhone, sms)],
+    ["email", () => sendEmail(booking.customerEmail, subject, html)],
+  ].filter(([channel]) =>
+    channel === "sms" ? booking.customerPhone : booking.customerEmail,
+  );
+
+  const results = await Promise.allSettled(attempts.map(([, send]) => send()));
+
+  const failed = results
+    .map((r, i) => ({ channel: attempts[i][0], r }))
+    .filter(({ r }) => r.status === "rejected");
+
+  for (const { channel, r } of failed) {
+    logger.error(
+      {
+        err: r.reason,
+        channel,
+        jobId: job.id,
+        type: name,
+        applicationId: booking.applicationId,
+      },
+      "notification delivery failed",
+    );
+  }
+
+  // Every channel failed: throw so BullMQ retries (attempts: 3, backoff).
+  // Partial failure doesn't throw — a retry would re-send the channel
+  // that already succeeded.
+  if (attempts.length && failed.length === attempts.length) {
+    throw new Error(`All notification channels failed for job ${job.id}`);
+  }
 }
 
 module.exports = { processNotificationJob };

@@ -1,6 +1,8 @@
 // Core OTP logic used by both the public /otp routes and internally by the
 // booking modify/cancel flow. OTPs live in Redis (not Postgres) with a TTL,
 // so there's nothing to clean up and codes auto-expire.
+const logger = require("../lib/logger");
+const { maskContact } = require("../utils/mask");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const redis = require("../lib/redis");
@@ -55,12 +57,23 @@ async function sendOtp({ contact, channel, purpose }) {
   );
 
   const message = `Your Makeup Studio verification code is ${code}. It expires in 5 minutes.`;
+
   if (channel === "sms") {
-    console.log(code);
-    // await sendSms(contact, message);
+    await sendSms(contact, message);
   } else {
-    console.log(code);
-    // await sendEmail(contact, "Your verification code", `<p>${message}</p>`);
+    await sendEmail(contact, "Your verification code", `<p>${message}</p>`);
+  }
+
+  // Local dev only: with delivery in log mode there's no other way to see
+  // the code. Never in production — logs are readable by more people than
+  // the customer, and an OTP in a log is a booking takeover.
+  const deliveryMode =
+    channel === "sms" ? process.env.SMS_MODE : process.env.EMAIL_MODE;
+  if (process.env.NODE_ENV !== "production" && deliveryMode !== "send") {
+    logger.debug(
+      { contact: maskContact(contact), devOtp: code },
+      "DEV ONLY: OTP code",
+    );
   }
 
   return { sent: true };

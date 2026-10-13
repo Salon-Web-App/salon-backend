@@ -173,7 +173,6 @@ async function logAndNotify(
 // via Prisma in `after`.
 function extractServiceIds(request) {
   const raw = request.payload?.services;
-  console.log("[staffEditBefore] raw services payload:", raw, typeof raw);
 
   if (Array.isArray(raw)) return raw.filter(Boolean);
 
@@ -217,13 +216,6 @@ async function staffEditAfter(response, request) {
   if (serviceIds === undefined) return response; // field wasn't submitted, leave relation untouched
   const staffId = response?.record?.params?.id;
   if (!staffId) return response;
-
-  console.log(
-    "[staffEditAfter] setting services for staff",
-    staffId,
-    "->",
-    serviceIds,
-  );
 
   await prisma.staff.update({
     where: { id: staffId },
