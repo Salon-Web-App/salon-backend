@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Review" ADD COLUMN     "order" INTEGER NOT NULL DEFAULT 0;

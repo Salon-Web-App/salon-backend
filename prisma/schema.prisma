@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Staff {
+  id           String   @id @default(uuid())
+  name         String
+  photoUrl     String?
+  bio          String?
+  specialty    String?
+  experience   String?
+  active       Boolean  @default(true)
+  workingHours Json     @default("{}")
+  services     Service[] @relation("StaffServices")
+  bookings     Booking[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+
+model Transformation {
+  id        String   @id @default(uuid())
+  title     String
+  category  String
+  beforeUrl String
+  afterUrl  String
+  active    Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Service {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  category        String?
+  icon            String?  // one of: crown, sparkles, scissors, palette, hand, heart, eye, droplet
+  price           Decimal
+  durationMinutes Int
+  imageUrl        String?
+  active          Boolean  @default(true)
+  staff           Staff[]  @relation("StaffServices")
+  bookings        Booking[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  packages Package[] @relation("PackageServices")
+}
+
+model Booking {
+  id              String    @id @default(uuid())
+  applicationId   String    @unique
+  customerName    String
+  customerPhone   String
+  customerEmail   String
+  phoneVerified   Boolean   @default(false)
+  emailVerified   Boolean   @default(false)
+  staff           Staff?    @relation(fields: [staffId], references: [id])
+  staffId         String?
+  service         Service?  @relation(fields: [serviceId], references: [id])
+  serviceId       String?
+  package         Package?  @relation(fields: [packageId], references: [id])
+  packageId       String?
+  startTime       DateTime
+  endTime         DateTime
+  status          String    @default("confirmed")
+  notes           String?
+  deletedAt       DateTime?
+  history         BookingHistory[]
+  review          Review?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([applicationId])
+  @@index([staffId, startTime])
+}
+
+model Package {
+  id              String   @id @default(uuid())
+  title           String
+  description     String?
+  services        Service[] @relation("PackageServices")
+  originalPrice   Decimal
+  offerPrice      Decimal
+  discountLabel   String?  // e.g. "20% OFF" — set directly by admin
+  durationMinutes Int
+  message         String?  // e.g. "Limited Time Offer"
+  imageUrl        String?
+  active          Boolean  @default(true)
+  order           Int      @default(0)
+  bookings        Booking[]
+  createdAt       DateTime @default(now())
+}
+
+model BookingHistory {
+  id         String   @id @default(uuid())
+  booking    Booking  @relation(fields: [bookingId], references: [id])
+  bookingId  String
+  changeType String   // e.g. "reschedule", "staff_assigned", "cancelled", "status_change"
+  oldValue   String?
+  newValue   String?
+  changedBy  String   // "customer" | "admin"
+  createdAt  DateTime @default(now())
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  bookingId String   @unique
+  rating    Int
+  comment   String?
+  approved  Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model AdminUser {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         String   @default("admin")
+  createdAt    DateTime @default(now())
+}

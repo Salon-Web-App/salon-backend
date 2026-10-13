@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    image: makeup-studio-app:local
+    environment:
+      NODE_ENV: development
+    volumes:
+      - .:/app
+      - /app/node_modules
+    user: root
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    image: makeup-studio-worker:local
+    environment:
+      NODE_ENV: development
+    volumes:
+      - .:/app
+      - /app/node_modules
