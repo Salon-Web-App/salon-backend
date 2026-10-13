@@ -1,50 +1,81 @@
-// Separate process (run with `npm run worker`, or as its own container/
-// Docker service) that consumes the "notifications" queue. Kept apart from
-// the API process so sending SMS/email never competes with request handling.
+// Worker process: consumes the notifications and maintenance queues and
+// registers recurring schedules. Same image as the API, started with
+// `node src/jobs/worker.js`. Safe to run any number of replicas.
+require("../config");
 require("node:dns").setDefaultResultOrder("ipv4first");
-require("dotenv").config();
 const { Worker } = require("bullmq");
-const cron = require("node-cron");
 const redis = require("../lib/redis");
 const prisma = require("../lib/prisma");
+const logger = require("../lib/logger");
+const { notificationsQueue, maintenanceQueue } = require("./queue");
 const { processNotificationJob } = require("./notificationProcessor");
-const { enqueueNotification } = require("./queue");
+const { processMaintenanceJob } = require("./maintenanceProcessor");
+const { registerSchedules } = require("./schedules");
 
-const worker = new Worker("notifications", processNotificationJob, {
-  connection: redis,
-});
-
-worker.on("completed", (job) =>
-  console.log(`Notification job ${job.id} (${job.name}) completed`),
-);
-worker.on("failed", (job, err) =>
-  console.error(`Notification job ${job?.id} failed:`, err.message),
-);
-
-// Daily at 9am: find tomorrow's bookings and enqueue reminders.
-cron.schedule("0 9 * * *", async () => {
-  const tomorrowStart = new Date();
-  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
-  tomorrowStart.setHours(0, 0, 0, 0);
-
-  const tomorrowEnd = new Date(tomorrowStart);
-  tomorrowEnd.setHours(23, 59, 59, 999);
-
-  const bookings = await prisma.booking.findMany({
-    where: {
-      startTime: { gte: tomorrowStart, lte: tomorrowEnd },
-      status: { notIn: ["cancelled"] },
-    },
-    select: { id: true },
-  });
-
-  for (const b of bookings) {
-    await enqueueNotification("booking.reminder", { bookingId: b.id });
-  }
-
-  console.log(
-    `Enqueued ${bookings.length} reminder notifications for tomorrow`,
+function attachLogging(worker, label) {
+  worker.on("completed", (job, result) =>
+    logger.info(
+      { queue: label, jobId: job.id, name: job.name, result },
+      "job completed",
+    ),
   );
-});
+  worker.on("failed", (job, err) =>
+    logger.error(
+      { queue: label, jobId: job?.id, name: job?.name, err },
+      "job failed",
+    ),
+  );
+  worker.on("error", (err) =>
+    logger.error({ queue: label, err }, "worker error"),
+  );
+}
 
-console.log("Notification worker started");
+async function main() {
+  await registerSchedules();
+
+  const notificationsWorker = new Worker(
+    "notifications",
+    processNotificationJob,
+    {
+      connection: redis,
+      concurrency: 5,
+    },
+  );
+  const maintenanceWorker = new Worker("maintenance", processMaintenanceJob, {
+    connection: redis,
+    concurrency: 1,
+  });
+  attachLogging(notificationsWorker, "notifications");
+  attachLogging(maintenanceWorker, "maintenance");
+
+  logger.info({ tz: process.env.TZ }, "worker started");
+
+  let shuttingDown = false;
+  const shutdown = async (signal) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    logger.info({ signal }, "worker shutting down");
+    setTimeout(() => process.exit(1), 25_000).unref();
+    try {
+      // close() stops taking new jobs and waits for in-flight ones to finish
+      await Promise.all([
+        notificationsWorker.close(),
+        maintenanceWorker.close(),
+      ]);
+      await Promise.all([notificationsQueue.close(), maintenanceQueue.close()]);
+      await prisma.$disconnect();
+      await redis.quit();
+      process.exit(0);
+    } catch (err) {
+      logger.error({ err }, "error during shutdown");
+      process.exit(1);
+    }
+  };
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+}
+
+main().catch((err) => {
+  logger.fatal({ err }, "worker failed to start");
+  process.exit(1);
+});

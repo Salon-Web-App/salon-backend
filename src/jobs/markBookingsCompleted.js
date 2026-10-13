@@ -1,65 +1,52 @@
-const cron = require("node-cron");
+// Marks bookings whose end time has passed as completed and queues the
+// "completed" notification. Run by the maintenance worker on a schedule.
+// Safe to run concurrently: each booking is claimed with a conditional
+// update, so only the run that actually flips the status sends the email.
 const prisma = require("../lib/prisma");
-const { enqueueNotification } = require("../jobs/queue");
+const { enqueueNotification } = require("./queue");
+const logger = require("../lib/logger");
+
+const NOT_COMPLETABLE = ["completed", "cancelled"];
 
 async function markBookingsCompleted() {
-  try {
-    const now = new Date();
+  const now = new Date();
 
-    // Find bookings whose end time has passed
-    const bookings = await prisma.booking.findMany({
-      where: {
-        status: { notIn: ["completed", "cancelled"] },
-        deletedAt: null,
-        endTime: { lte: now },
-      },
-      orderBy: { endTime: "asc" },
-    });
+  const due = await prisma.booking.findMany({
+    where: {
+      status: { notIn: NOT_COMPLETABLE },
+      deletedAt: null,
+      endTime: { lte: now },
+    },
+    select: { id: true, applicationId: true },
+    orderBy: { endTime: "asc" },
+  });
 
-    if (bookings.length === 0) {
-      console.log(
-        `[Booking Completion Job] ${now.toISOString()} - No bookings to complete`,
+  let completed = 0;
+  for (const booking of due) {
+    try {
+      // Claim: only succeeds if nobody else completed/cancelled it meanwhile.
+      const { count } = await prisma.booking.updateMany({
+        where: { id: booking.id, status: { notIn: NOT_COMPLETABLE } },
+        data: { status: "completed" },
+      });
+      if (count === 0) continue;
+
+      await enqueueNotification(
+        "booking.completed",
+        { bookingId: booking.id },
+        { jobId: `booking.completed-${booking.id}` },
       );
-      return;
+      completed += 1;
+    } catch (err) {
+      logger.error(
+        { err, applicationId: booking.applicationId },
+        "failed to complete booking",
+      );
     }
-
-    console.log(
-      `[Booking Completion Job] Found ${bookings.length} booking(s) to complete`,
-    );
-
-    // Process each booking ONE BY ONE
-    for (const booking of bookings) {
-      try {
-        // Mark this booking as completed
-        const completedBooking = await prisma.booking.update({
-          where: {
-            id: booking.id,
-          },
-          data: {
-            status: "completed",
-          },
-        });
-
-        console.log(
-          `[Booking Completion Job] Booking ${completedBooking.applicationId} marked as completed`,
-        );
-
-        // Send email AFTER successfully completing the booking
-
-        await enqueueNotification("booking.completed", {
-          bookingId: booking.id,
-        });
-      } catch (error) {
-        // If one booking fails, continue processing the others
-        console.error(
-          `[Booking Completion Job] Failed to process booking ${booking.applicationId}:`,
-          error,
-        );
-      }
-    }
-  } catch (error) {
-    console.error("[Booking Completion Job] Error:", error);
   }
+
+  logger.info({ found: due.length, completed }, "markBookingsCompleted done");
+  return { found: due.length, completed };
 }
 
 module.exports = markBookingsCompleted;

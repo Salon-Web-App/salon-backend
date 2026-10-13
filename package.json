@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "worker": "node src/jobs/worker.js",
+    "job": "node scripts/run-job.js",
     "worker:notifications": "node src/jobs/worker.js",
     "worker:completedBooking": "node src/jobs/markBookingsCompleted.js",
     "prisma:migrate": "prisma migrate dev",
@@ -21,7 +23,7 @@
     "@adminjs/prisma": "^5.0.4",
     "@prisma/client": "^5.18.0",
     "adminjs": "^7.8.13",
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.3",
     "bullmq": "^6.3.14",
     "cloudinary": "^2.4.0",
     "connect-redis": "^7.1.1",
@@ -36,8 +38,8 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
-    "node-cron": "^3.0.3",
     "nodemailer": "^6.9.14",
+    "pino": "^10.4.0",
     "rate-limit-redis": "^4.3.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -47,6 +49,7 @@
   "devDependencies": {
     "@adminjs/bundler": "^3.0.0",
     "nodemon": "^3.1.4",
+    "pino-pretty": "^13.2.0",
     "prisma": "^5.18.0"
   }
 }

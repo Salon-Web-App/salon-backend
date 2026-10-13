@@ -12,7 +12,7 @@
 //
 // Mounted at /backoffice (NOT /admin) because /admin is already used by
 // your custom REST API routes in src/routes/admin/*.
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const prisma = require("../lib/prisma");
 const { enqueueNotification } = require("../jobs/queue");
 const { uploadImageBuffer } = require("../lib/cloudinary");

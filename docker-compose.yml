@@ -26,6 +26,9 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379
+      TZ: Asia/Kathmandu
+      BUSINESS_TZ: Asia/Kathmandu
+
     depends_on:
       db:
         condition: service_healthy

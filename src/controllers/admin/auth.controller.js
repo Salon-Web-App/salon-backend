@@ -1,7 +1,7 @@
 // Admin login only — customers never authenticate in this app (they use
 // OTP + Application ID instead). This issues the JWT used by the
 // requireAdmin middleware on every other /admin/* route.
-const bcrypt = require('bcrypt');
+const bcrypt = require("bcryptjs");
 const jwt = require('jsonwebtoken');
 const prisma = require('../../lib/prisma');
 
