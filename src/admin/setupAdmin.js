@@ -16,6 +16,9 @@ const bcrypt = require("bcrypt");
 const prisma = require("../lib/prisma");
 const { enqueueNotification } = require("../jobs/queue");
 const { uploadImageBuffer } = require("../lib/cloudinary");
+const RedisStore = require("connect-redis").default;
+const redis = require("../lib/redis");
+const { cookieSecure } = require("../config");
 
 // Same constant as src/controllers/admin/auth.controller.js — used only as
 // a bcrypt.compare target for the "user not found" login path, never to
@@ -1017,19 +1020,19 @@ async function mountAdminPanel(app) {
     },
     null, // no pre-built router — let AdminJSExpress create one
     {
-      // express-session options. Default MemoryStore is fine at this
-      // scale (single admin, low traffic) — sessions just reset if the
-      // process restarts, which only means logging in again.
+      // express-session options. Sessions live in Redis so every
+      // backend task/replica sees the same login — an in-memory store
+      // would log the admin out whenever a request hit another task.
+      store: new RedisStore({ client: redis, prefix: "salon:sess:" }),
+      name: "salon.sid",
+      proxy: true, // trust X-Forwarded-Proto from the ALB/nginx for secure cookies
       resave: false,
       saveUninitialized: false,
       secret: process.env.ADMIN_SESSION_SECRET,
       cookie: {
-        sameSite: "lax",
-        //TODO update this once domain is finalized for https
-        // sameSite: "strict",
         httpOnly: true,
-        // secure: process.env.NODE_ENV === "production",
-        secure: false,
+        sameSite: "lax",
+        secure: cookieSecure, // false locally (http), true in ECS (https via ALB)
       },
     },
   );

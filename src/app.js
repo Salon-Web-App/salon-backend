@@ -16,7 +16,6 @@ const {
   backofficeLoginLimiter,
 } = require("./middlewares/rateLimit.middleware");
 const { mountAdminPanel } = require("./admin/setupAdmin");
-require("./jobs/markBookingsCompleted");
 
 async function buildApp() {
   const app = express();
@@ -58,9 +57,20 @@ async function buildApp() {
 
   app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
+  const lifecycle = require("./lib/lifecycle");
   app.get("/health", (req, res) => res.json({ status: "ok" }));
+  app.get("/ready", async (req, res) => {
+    if (lifecycle.shuttingDown) return res.status(503).json({ status: "draining" });
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      await redis.ping();
+      res.json({ status: "ready" });
+    } catch {
+      res.status(503).json({ status: "not ready" });
+    }
+  });
 
-  app.use("/", routes);
+  app.use("/api", routes);
 
   // Origin/Referer check for every /backoffice write — defense-in-depth
   // alongside the session cookie's SameSite=strict setting (see

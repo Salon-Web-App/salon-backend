@@ -5,11 +5,20 @@
 // / basic DoS).
 const rateLimit = require("express-rate-limit");
 
+const { RedisStore } = require("rate-limit-redis");
+const redis = require("../lib/redis");
+const store = (name) =>
+  new RedisStore({
+    prefix: `salon:rl:${name}:`,
+    sendCommand: (cmd, ...args) => redis.call(cmd, ...args),
+  });
+
 // Keyed by contact (not IP) — an IP-keyed limit only stops one attacker
 // from one address; spread across a handful of IPs it does nothing to
 // protect an individual victim from being spammed with OTPs.
 function otpContactKey(req) {
-  const purpose = typeof req.body?.purpose === "string" ? req.body.purpose : "unknown";
+  const purpose =
+    typeof req.body?.purpose === "string" ? req.body.purpose : "unknown";
   const contact =
     typeof req.body?.contact === "string"
       ? req.body.contact.trim().toLowerCase()

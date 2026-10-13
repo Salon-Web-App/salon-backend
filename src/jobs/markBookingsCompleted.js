@@ -9,16 +9,11 @@ async function markBookingsCompleted() {
     // Find bookings whose end time has passed
     const bookings = await prisma.booking.findMany({
       where: {
-        status: {
-          not: "completed",
-        },
-        endTime: {
-          lte: now,
-        },
+        status: { notIn: ["completed", "cancelled"] },
+        deletedAt: null,
+        endTime: { lte: now },
       },
-      orderBy: {
-        endTime: "asc",
-      },
+      orderBy: { endTime: "asc" },
     });
 
     if (bookings.length === 0) {
@@ -66,13 +61,5 @@ async function markBookingsCompleted() {
     console.error("[Booking Completion Job] Error:", error);
   }
 }
-
-// Run once when server starts
-markBookingsCompleted();
-
-// Run every minute
-cron.schedule("*/30 * * * *", () => {
-  markBookingsCompleted();
-});
 
 module.exports = markBookingsCompleted;
