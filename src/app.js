@@ -58,9 +58,19 @@ async function buildApp() {
   app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
   const lifecycle = require("./lib/lifecycle");
+
   app.get("/health", (req, res) => res.json({ status: "ok" }));
+
+  if (process.env.NODE_ENV !== "production") {
+    // Dev-only: simulates a slow request so graceful shutdown can be tested.
+    app.get("/debug/slow", (req, res) => {
+      setTimeout(() => res.json({ ok: true, finishedAfterMs: 5000 }), 5000);
+    });
+  }
+
   app.get("/ready", async (req, res) => {
-    if (lifecycle.shuttingDown) return res.status(503).json({ status: "draining" });
+    if (lifecycle.shuttingDown)
+      return res.status(503).json({ status: "draining" });
     try {
       await prisma.$queryRaw`SELECT 1`;
       await redis.ping();

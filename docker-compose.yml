@@ -17,6 +17,7 @@ services:
       redis:
         condition: service_started
     command: node src/server.js
+    stop_grace_period: 30s
 
   worker:
     container_name: makeup-studio-worker
@@ -35,6 +36,7 @@ services:
       redis:
         condition: service_started
     command: node src/jobs/worker.js
+    stop_grace_period: 30s
 
   db:
     image: postgres:16-alpine

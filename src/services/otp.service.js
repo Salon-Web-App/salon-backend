@@ -1,7 +1,7 @@
 // Core OTP logic used by both the public /otp routes and internally by the
 // booking modify/cancel flow. OTPs live in Redis (not Postgres) with a TTL,
 // so there's nothing to clean up and codes auto-expire.
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const redis = require("../lib/redis");
 const { generateOtpCode } = require("../utils/otpCode");
