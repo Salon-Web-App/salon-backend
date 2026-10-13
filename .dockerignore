@@ -1,4 +1,26 @@
+# Dependencies are installed inside the image
 node_modules
-dist
-.prisma
+
+# Never send secrets or VCS data into the build
 .env
+.env.*
+!.env.example
+.git
+.gitignore
+
+# Local / generated
+.adminjs
+coverage
+*.log
+.DS_Store
+
+# Not needed in the image
+docs
+tests
+*.md
+Dockerfile*
+docker-compose*.yml
+Makefile
+push.sh
+.husky
+.vscode

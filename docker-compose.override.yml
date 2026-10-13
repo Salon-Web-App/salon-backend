@@ -1,23 +1,22 @@
-version: "3.9"
-
 services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.app
-    image: makeup-studio-app:local
+      target: dev
+    image: salon-backend:dev
+    command: npx nodemon src/server.js
     environment:
       NODE_ENV: development
     volumes:
       - .:/app
       - /app/node_modules
-    user: root
 
   worker:
     build:
       context: .
-      dockerfile: Dockerfile.worker
-    image: makeup-studio-worker:local
+      target: dev
+    image: salon-backend:dev
+    command: npx nodemon src/jobs/worker.js
     environment:
       NODE_ENV: development
     volumes:

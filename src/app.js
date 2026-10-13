@@ -10,7 +10,9 @@ const helmet = require("helmet");
 const { randomUUID } = require("node:crypto");
 const pinoHttp = require("pino-http");
 const logger = require("./lib/logger");
-
+const prisma = require("./lib/prisma");
+const redis = require("./lib/redis");
+const lifecycle = require("./lib/lifecycle");
 const routes = require("./routes");
 const { errorHandler } = require("./middlewares/errorHandler.middleware");
 const { csrfOriginCheck } = require("./middlewares/csrfOriginCheck.middleware");
@@ -105,13 +107,27 @@ async function buildApp() {
   app.get("/ready", async (req, res) => {
     if (lifecycle.shuttingDown)
       return res.status(503).json({ status: "draining" });
+
+    const checks = {};
     try {
       await prisma.$queryRaw`SELECT 1`;
-      await redis.ping();
-      res.json({ status: "ready" });
-    } catch {
-      res.status(503).json({ status: "not ready" });
+      checks.db = "ok";
+    } catch (err) {
+      checks.db = "fail";
+      logger.warn({ err }, "readiness: database check failed");
     }
+    try {
+      await redis.ping();
+      checks.redis = "ok";
+    } catch (err) {
+      checks.redis = "fail";
+      logger.warn({ err }, "readiness: redis check failed");
+    }
+
+    const ready = Object.values(checks).every((v) => v === "ok");
+    res
+      .status(ready ? 200 : 503)
+      .json({ status: ready ? "ready" : "not ready", checks });
   });
 
   app.use("/api", routes);

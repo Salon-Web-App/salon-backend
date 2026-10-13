@@ -1,7 +1,9 @@
-version: "3.9"
-
 services:
   app:
+    build:
+      context: .
+      target: runtime
+    image: salon-backend:local
     container_name: makeup-studio-app
     restart: unless-stopped
     ports:
@@ -21,6 +23,10 @@ services:
     stop_grace_period: 30s
 
   worker:
+    build:
+      context: .
+      target: runtime
+    image: salon-backend:local
     container_name: makeup-studio-worker
     restart: unless-stopped
     env_file:
@@ -69,8 +75,8 @@ services:
   migrate:
     build:
       context: .
-      dockerfile: Dockerfile.app
-    image: makeup-studio-app:local
+      target: runtime
+    image: salon-backend:local
     env_file:
       - .env
     environment:
