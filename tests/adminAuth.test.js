@@ -1,11 +1,5 @@
 const request = require("supertest");
-const {
-  buildApp,
-  resetDb,
-  createAdmin,
-  adminToken,
-  closeAll,
-} = require("./helpers");
+const { buildApp, resetDb, createAdmin, adminToken, closeAll } = require("./helpers");
 
 let app;
 beforeAll(async () => {
@@ -17,9 +11,7 @@ afterAll(closeAll);
 describe("POST /api/admin/auth/login", () => {
   test("valid credentials return a JWT", async () => {
     const { email, password } = await createAdmin();
-    const res = await request(app)
-      .post("/api/admin/auth/login")
-      .send({ email, password });
+    const res = await request(app).post("/api/admin/auth/login").send({ email, password });
     expect(res.status).toBe(200);
     expect(res.body.token).toEqual(expect.any(String));
   });
@@ -61,17 +53,13 @@ describe("protected admin routes", () => {
   });
 
   test("valid admin token -> 200", async () => {
-    const res = await request(app)
-      .get(path)
-      .set("Authorization", `Bearer ${adminToken()}`);
+    const res = await request(app).get(path).set("Authorization", `Bearer ${adminToken()}`);
     expect(res.status).toBe(200);
   });
 
   test("token signed with another secret -> 401", async () => {
     const forged = adminToken({}, "attacker-secret");
-    const res = await request(app)
-      .get(path)
-      .set("Authorization", `Bearer ${forged}`);
+    const res = await request(app).get(path).set("Authorization", `Bearer ${forged}`);
     expect(res.status).toBe(401);
   });
 

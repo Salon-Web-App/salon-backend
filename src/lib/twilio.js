@@ -1,4 +1,4 @@
-// SMS sender. SMS_MODE: "send" (real Twilio) or "log" (local dev / no credit).
+// SMS_MODE: "send" delivers via Twilio, anything else only logs.
 const logger = require("./logger");
 const { maskContact } = require("../utils/mask");
 
@@ -6,10 +6,7 @@ const MODE = process.env.SMS_MODE || "log";
 
 const client =
   MODE === "send"
-    ? require("twilio")(
-        process.env.TWILIO_ACCOUNT_SID,
-        process.env.TWILIO_AUTH_TOKEN,
-      )
+    ? require("twilio")(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
     : null;
 
 async function sendSms(to, body) {
@@ -22,6 +19,7 @@ async function sendSms(to, body) {
     from: process.env.TWILIO_FROM_NUMBER,
     body,
   });
+  // Body is not logged: it can contain an OTP.
   logger.info({ to: maskContact(to), sid: msg.sid }, "sms sent");
   return msg;
 }

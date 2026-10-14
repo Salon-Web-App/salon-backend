@@ -1,7 +1,5 @@
-// Registers recurring schedules in Redis. upsertJobScheduler is idempotent:
-// every worker calls it at boot, Redis keeps exactly one scheduler per id,
-// and exactly one job is created per tick regardless of worker count.
-// Changing a pattern here and redeploying updates the existing scheduler.
+// Schedules are stored in Redis. upsertJobScheduler is idempotent, so every
+// worker can call it on boot and each tick still produces exactly one job.
 const { maintenanceQueue } = require("./queue");
 const { tz } = require("../config");
 
@@ -18,8 +16,7 @@ const SCHEDULES = [
   },
 ];
 
-// Ids of schedulers that used to exist — removed on boot so a deleted
-// schedule doesn't keep firing from Redis forever.
+// Removing an entry from SCHEDULES doesn't stop it; add its id here.
 const RETIRED = [];
 
 async function registerSchedules() {

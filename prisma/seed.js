@@ -1,7 +1,5 @@
-// Creates the admin user from ADMIN_EMAIL / ADMIN_PASSWORD. Safe to re-run:
-// an existing admin is left untouched unless SEED_RESET_ADMIN_PASSWORD=true.
-//
-// Usage: npm run db:seed
+// Creates the admin user. An existing admin's password is left alone unless
+// SEED_RESET_ADMIN_PASSWORD=true.
 if (process.env.NODE_ENV !== "production") require("dotenv").config();
 const bcrypt = require("bcryptjs");
 const { PrismaClient } = require("@prisma/client");
@@ -34,9 +32,7 @@ async function main() {
     create: { email, passwordHash, role: "admin" },
   });
 
-  console.log(
-    existing ? `Admin ${email} password reset.` : `Admin ${email} created.`,
-  );
+  console.log(existing ? `Admin ${email} password reset.` : `Admin ${email} created.`);
 }
 
 main()

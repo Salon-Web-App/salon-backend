@@ -1,0 +1,98 @@
+name: salon-stack
+
+x-backend-env: &backend-env
+  NODE_ENV: production
+  TZ: Asia/Kathmandu
+  BUSINESS_TZ: Asia/Kathmandu
+  DATABASE_URL: postgresql://salon:salon@db:5432/salon
+  REDIS_URL: redis://redis:6379
+  FRONTEND_ORIGIN: http://localhost:8080
+  TRUST_PROXY: "1"
+  COOKIE_SECURE: "false" # no TLS locally
+  EMAIL_MODE: log
+  SMS_MODE: log
+  LOG_LEVEL: info
+
+x-backend: &backend
+  build:
+    context: ..
+    target: runtime
+  image: salon-backend:local
+  env_file: ../.env # secrets only; values above take precedence
+  stop_grace_period: 30s
+  restart: unless-stopped
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: salon
+      POSTGRES_PASSWORD: salon
+      POSTGRES_DB: salon
+    volumes:
+      - stack-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U salon -d salon"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+
+  migrate:
+    <<: *backend
+    environment:
+      <<: *backend-env
+      SERVICE_NAME: migrate
+    command: ["npm", "run", "db:migrate"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend:
+    <<: *backend
+    environment:
+      <<: *backend-env
+      SERVICE_NAME: api
+    deploy:
+      replicas: 2
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+
+  worker:
+    <<: *backend
+    environment:
+      <<: *backend-env
+      SERVICE_NAME: worker
+    command: ["node", "src/jobs/worker.js"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ../../frontend
+      target: runtime
+    image: salon-frontend:local
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  stack-db:

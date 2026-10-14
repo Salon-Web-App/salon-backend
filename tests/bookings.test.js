@@ -28,25 +28,18 @@ describe("POST /api/bookings", () => {
     const res = await create(bookingPayload(service));
 
     expect(res.status).toBe(201);
-    expect(res.body).toMatchObject({
-      applicationId: expect.any(String),
-      status: "confirmed",
-    });
+    expect(res.body).toMatchObject({ applicationId: expect.any(String), status: "confirmed" });
 
     const row = await prisma.booking.findUnique({
       where: { applicationId: res.body.applicationId },
     });
     expect(row.staffId).toBe(staff.id);
     expect(row.phoneVerified).toBe(true);
-    expect(row.endTime.getTime() - row.startTime.getTime()).toBe(
-      60 * 60 * 1000,
-    );
+    expect(row.endTime.getTime() - row.startTime.getTime()).toBe(60 * 60 * 1000);
 
     const jobs = await notificationsQueue.getJobs(["waiting", "delayed"]);
     expect(
-      jobs.some(
-        (j) => j.name === "booking.created" && j.data.bookingId === row.id,
-      ),
+      jobs.some((j) => j.name === "booking.created" && j.data.bookingId === row.id),
     ).toBe(true);
   });
 
@@ -65,22 +58,18 @@ describe("POST /api/bookings", () => {
     const service = await createService();
     await createStaff([service]);
     const res = await create(
-      bookingPayload(service, {
-        verificationToken: verificationToken("+9779811111111"),
-      }),
+      bookingPayload(service, { verificationToken: verificationToken("+9779811111111") }),
     );
     expect(res.status).toBe(401);
     expect(await prisma.booking.count()).toBe(0);
   });
 
-  test("token issued for booking_modify can't create a booking -> 401", async () => {
+  test("booking_modify token can't create a booking -> 401", async () => {
     const service = await createService();
     await createStaff([service]);
     const phone = "+9779800000001";
     const res = await create(
-      bookingPayload(service, {
-        verificationToken: verificationToken(phone, "booking_modify"),
-      }),
+      bookingPayload(service, { verificationToken: verificationToken(phone, "booking_modify") }),
     );
     expect(res.status).toBe(401);
   });
@@ -88,9 +77,7 @@ describe("POST /api/bookings", () => {
   test("unknown service -> 400", async () => {
     const service = await createService();
     const res = await create(
-      bookingPayload(service, {
-        serviceId: "00000000-0000-0000-0000-000000000000",
-      }),
+      bookingPayload(service, { serviceId: "00000000-0000-0000-0000-000000000000" }),
     );
     expect(res.status).toBe(400);
   });
@@ -119,7 +106,7 @@ describe("POST /api/bookings", () => {
 
     const first = await create(body);
     expect(first.status).toBe(201);
-    // make sure the first booking went to "busy", whatever the selection order
+    // Pin the first booking to "busy" regardless of selection order.
     await prisma.booking.update({
       where: { applicationId: first.body.applicationId },
       data: { staffId: busy.id },
@@ -140,9 +127,7 @@ describe("GET /api/bookings/:applicationId", () => {
     await createStaff([service]);
     const created = await create(bookingPayload(service));
 
-    const res = await request(app).get(
-      `/api/bookings/${created.body.applicationId}`,
-    );
+    const res = await request(app).get(`/api/bookings/${created.body.applicationId}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({

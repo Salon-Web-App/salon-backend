@@ -1,7 +1,3 @@
-// Marks bookings whose end time has passed as completed and queues the
-// "completed" notification. Run by the maintenance worker on a schedule.
-// Safe to run concurrently: each booking is claimed with a conditional
-// update, so only the run that actually flips the status sends the email.
 const prisma = require("../lib/prisma");
 const { enqueueNotification } = require("./queue");
 const logger = require("../lib/logger");
@@ -24,7 +20,8 @@ async function markBookingsCompleted() {
   let completed = 0;
   for (const booking of due) {
     try {
-      // Claim: only succeeds if nobody else completed/cancelled it meanwhile.
+      // Conditional update acts as a claim, so overlapping runs can't
+      // complete (and notify) the same booking twice.
       const { count } = await prisma.booking.updateMany({
         where: { id: booking.id, status: { notIn: NOT_COMPLETABLE } },
         data: { status: "completed" },

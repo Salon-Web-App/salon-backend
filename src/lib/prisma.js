@@ -1,8 +1,14 @@
-// Single shared Prisma client instance. Import this everywhere instead of
-// creating `new PrismaClient()` in multiple files, which would open too
-// many DB connections.
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require("@prisma/client");
+const logger = require("./logger");
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: [
+    { level: "warn", emit: "event" },
+    { level: "error", emit: "event" },
+  ],
+});
+
+prisma.$on("warn", (e) => logger.warn({ prisma: e.message }, "prisma warning"));
+prisma.$on("error", (e) => logger.error({ prisma: e.message }, "prisma error"));
 
 module.exports = prisma;

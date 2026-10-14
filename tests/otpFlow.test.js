@@ -1,5 +1,3 @@
-// Fix the OTP so the test can "receive" it. Must be declared before the app
-// is required — jest hoists jest.mock() to the top of the file.
 jest.mock("../src/utils/otpCode", () => ({ generateOtpCode: () => "123456" }));
 
 const request = require("supertest");

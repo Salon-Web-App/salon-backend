@@ -1,9 +1,13 @@
-// Core booking business logic, kept separate from the controllers so it
-// can be reused by both the public routes and, if needed later, admin
-// routes or background jobs.
 const prisma = require("../lib/prisma");
 const { generateApplicationId } = require("../utils/applicationId");
 const { enqueueNotification } = require("../jobs/queue");
+
+function httpError(status, message) {
+  const err = new Error(message);
+  err.status = status;
+  err.expose = true;
+  return err;
+}
 
 async function createBooking({
   customerName,
@@ -20,29 +24,14 @@ async function createBooking({
 
   if (packageId) {
     const pkg = await prisma.package.findUnique({ where: { id: packageId } });
-    if (!pkg || !pkg.active) {
-      const err = new Error("Package not found or unavailable");
-      err.status = 404;
-      err.expose = true;
-      throw err;
-    }
+    if (!pkg || !pkg.active) throw httpError(404, "Package not found or unavailable");
     durationMinutes = pkg.durationMinutes;
   } else if (serviceId) {
-    const service = await prisma.service.findUnique({
-      where: { id: serviceId },
-    });
-    if (!service || !service.active) {
-      const err = new Error("Service not found or unavailable");
-      err.status = 404;
-      err.expose = true;
-      throw err;
-    }
+    const service = await prisma.service.findUnique({ where: { id: serviceId } });
+    if (!service || !service.active) throw httpError(404, "Service not found or unavailable");
     durationMinutes = service.durationMinutes;
   } else {
-    const err = new Error("Either serviceId or packageId is required");
-    err.status = 400;
-    err.expose = true;
-    throw err;
+    throw httpError(400, "Either serviceId or packageId is required");
   }
 
   const start = new Date(startTime);
@@ -58,12 +47,7 @@ async function createBooking({
         },
       });
       if (conflict) {
-        const err = new Error(
-          "This time slot was just booked. Please pick another.",
-        );
-        err.status = 409;
-        err.expose = true;
-        throw err;
+        throw httpError(409, "This time slot was just booked. Please pick another.");
       }
     }
 
@@ -98,20 +82,12 @@ async function getByApplicationId(applicationId) {
     include: { service: true, package: true, staff: true },
   });
 
-  if (!booking) {
-    const err = new Error("Application not found");
-    err.status = 404;
-    err.expose = true;
-    throw err;
-  }
+  if (!booking) throw httpError(404, "Application not found");
 
   return booking;
 }
 
-async function modifyBooking(
-  applicationId,
-  { startTime, serviceId, changedBy = "customer" },
-) {
+async function modifyBooking(applicationId, { startTime, serviceId, changedBy = "customer" }) {
   const booking = await getByApplicationId(applicationId);
 
   const data = {};
@@ -131,9 +107,7 @@ async function modifyBooking(
   if (startTime) {
     let durationMinutes;
     if (serviceId) {
-      const service = await prisma.service.findUnique({
-        where: { id: serviceId },
-      });
+      const service = await prisma.service.findUnique({ where: { id: serviceId } });
       durationMinutes = service.durationMinutes;
     } else if (booking.packageId) {
       durationMinutes = booking.package.durationMinutes;
@@ -153,12 +127,7 @@ async function modifyBooking(
           AND: [{ startTime: { lt: newEnd } }, { endTime: { gt: newStart } }],
         },
       });
-      if (conflict) {
-        const err = new Error("This time slot is no longer available.");
-        err.status = 409;
-        err.expose = true;
-        throw err;
-      }
+      if (conflict) throw httpError(409, "This time slot is no longer available.");
     }
 
     historyEntries.push({
@@ -175,9 +144,7 @@ async function modifyBooking(
   const updated = await prisma.$transaction(async (tx) => {
     const result = await tx.booking.update({ where: { id: booking.id }, data });
     for (const entry of historyEntries) {
-      await tx.bookingHistory.create({
-        data: { bookingId: booking.id, ...entry },
-      });
+      await tx.bookingHistory.create({ data: { bookingId: booking.id, ...entry } });
     }
     return result;
   });
@@ -211,19 +178,12 @@ async function cancelBooking(applicationId, { changedBy = "customer" } = {}) {
 
   return updated;
 }
-async function availableStaff(serviceID, start, end) {
-  const availibleStaffs = await prisma.staff.findMany({
+
+async function availableStaff(serviceId, start, end) {
+  return prisma.staff.findMany({
     where: {
       active: true,
-
-      ...(serviceID && {
-        services: {
-          some: {
-            id: serviceID,
-          },
-        },
-      }),
-
+      ...(serviceId && { services: { some: { id: serviceId } } }),
       bookings: {
         none: {
           deletedAt: null,
@@ -233,14 +193,10 @@ async function availableStaff(serviceID, start, end) {
         },
       },
     },
-
-    select: {
-      id: true,
-      name: true,
-    },
+    select: { id: true, name: true },
   });
-  return availibleStaffs;
 }
+
 module.exports = {
   createBooking,
   getByApplicationId,

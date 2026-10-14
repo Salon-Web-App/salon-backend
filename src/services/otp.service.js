@@ -1,16 +1,14 @@
-// Core OTP logic used by both the public /otp routes and internally by the
-// booking modify/cancel flow. OTPs live in Redis (not Postgres) with a TTL,
-// so there's nothing to clean up and codes auto-expire.
-const logger = require("../lib/logger");
-const { maskContact } = require("../utils/mask");
+// OTPs live in Redis with a TTL, so expired codes clean themselves up.
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const redis = require("../lib/redis");
+const logger = require("../lib/logger");
 const { generateOtpCode } = require("../utils/otpCode");
 const { sendSms } = require("../lib/twilio");
 const { sendEmail } = require("../lib/brevo");
+const { maskContact } = require("../utils/mask");
 
-const OTP_TTL_SECONDS = 5 * 60; // 5 minutes
+const OTP_TTL_SECONDS = 5 * 60;
 const MAX_ATTEMPTS = 5;
 const OTP_RESEND_COOLDOWN_SECONDS = 60;
 
@@ -27,8 +25,7 @@ function otpCooldownKey(purpose, contact) {
 async function sendOtp({ contact, channel, purpose }) {
   const cooldownKey = otpCooldownKey(purpose, contact);
 
-  // "SET ... NX" only succeeds if the cooldown key isn't already set, so this
-  // doubles as the check-and-set — no separate GET/race window.
+  // SET NX doubles as check-and-set, so there's no race between GET and SET.
   const acquired = await redis.set(
     cooldownKey,
     "1",
@@ -57,39 +54,29 @@ async function sendOtp({ contact, channel, purpose }) {
   );
 
   const message = `Your Makeup Studio verification code is ${code}. It expires in 5 minutes.`;
-
   if (channel === "sms") {
     await sendSms(contact, message);
   } else {
     await sendEmail(contact, "Your verification code", `<p>${message}</p>`);
   }
 
-  // Local dev only: with delivery in log mode there's no other way to see
-  // the code. Never in production — logs are readable by more people than
-  // the customer, and an OTP in a log is a booking takeover.
-  const deliveryMode =
-    channel === "sms" ? process.env.SMS_MODE : process.env.EMAIL_MODE;
+  // In local dev with delivery disabled this is the only way to see the
+  // code. Never in production.
+  const deliveryMode = channel === "sms" ? process.env.SMS_MODE : process.env.EMAIL_MODE;
   if (process.env.NODE_ENV !== "production" && deliveryMode !== "send") {
-    logger.debug(
-      { contact: maskContact(contact), devOtp: code },
-      "DEV ONLY: OTP code",
-    );
+    logger.debug({ contact: maskContact(contact), devOtp: code }, "DEV ONLY: OTP code");
   }
 
   return { sent: true };
 }
 
-// Verifies the code and, on success, issues a short-lived JWT that scopes
-// what the caller is allowed to do next (create or modify a booking for
-// this exact contact). This token — not the OTP itself — is what the
-// booking routes require, so a code can't be reused after verification.
+// On success returns a short-lived JWT scoped to this contact + purpose.
+// Booking routes require the token, not the OTP, so a code can't be reused.
 async function verifyOtp({ contact, otp, purpose }) {
   const key = otpKey(purpose, contact);
   const raw = await redis.get(key);
   if (!raw) {
-    const err = new Error(
-      "OTP expired or not found. Please request a new one.",
-    );
+    const err = new Error("OTP expired or not found. Please request a new one.");
     err.status = 400;
     err.expose = true;
     throw err;
@@ -99,9 +86,7 @@ async function verifyOtp({ contact, otp, purpose }) {
 
   if (record.attempts >= MAX_ATTEMPTS) {
     await redis.del(key);
-    const err = new Error(
-      "Too many incorrect attempts. Please request a new code.",
-    );
+    const err = new Error("Too many incorrect attempts. Please request a new code.");
     err.status = 429;
     err.expose = true;
     throw err;
@@ -118,7 +103,7 @@ async function verifyOtp({ contact, otp, purpose }) {
     throw err;
   }
 
-  await redis.del(key); // one-time use
+  await redis.del(key);
 
   const verificationToken = jwt.sign(
     { contact, purpose },
@@ -129,8 +114,6 @@ async function verifyOtp({ contact, otp, purpose }) {
   return { verificationToken };
 }
 
-// Used by the booking routes to confirm a verificationToken is valid,
-// unexpired, and matches the expected contact + purpose.
 function assertVerificationToken(token, { contact, purpose }) {
   let payload;
   try {

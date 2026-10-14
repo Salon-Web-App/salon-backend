@@ -1,6 +1,4 @@
-// SMTP email sender. EMAIL_MODE controls delivery:
-//   "send" — really send via SMTP (production)
-//   "log"  — don't send; log that an email would have gone out (local dev)
+// EMAIL_MODE: "send" delivers via SMTP, anything else only logs.
 const nodemailer = require("nodemailer");
 const logger = require("./logger");
 const { maskContact } = require("../utils/mask");
@@ -26,10 +24,7 @@ if (transporter) {
 
 async function sendEmail(to, subject, html) {
   if (MODE !== "send") {
-    logger.info(
-      { to: maskContact(to), subject, mode: MODE },
-      "email not sent (log mode)",
-    );
+    logger.info({ to: maskContact(to), subject, mode: MODE }, "email not sent (log mode)");
     return { skipped: true };
   }
   const info = await transporter.sendMail({
@@ -38,10 +33,7 @@ async function sendEmail(to, subject, html) {
     subject,
     html,
   });
-  logger.info(
-    { to: maskContact(to), subject, messageId: info.messageId },
-    "email sent",
-  );
+  logger.info({ to: maskContact(to), subject, messageId: info.messageId }, "email sent");
   return info;
 }
 

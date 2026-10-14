@@ -37,14 +37,6 @@ router.post(
   bookingsController.requestModifyOtp,
 );
 
-// router.post(
-//   "/:applicationId/verify-contact",
-//   bookingWriteLimiter,
-//   [body("channel").isIn(["sms", "email"]), body("contact").notEmpty()],
-//   validate,
-//   bookingsController.validateContact,
-// );
-
 router.patch(
   "/:applicationId",
   bookingWriteLimiter,

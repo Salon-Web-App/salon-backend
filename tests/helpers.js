@@ -1,5 +1,3 @@
-// Shared test utilities: app factory, database reset, data factories,
-// token helpers, and teardown.
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const buildApp = require("../src/app");
@@ -8,22 +6,16 @@ const redis = require("../src/lib/redis");
 const { notificationsQueue, maintenanceQueue } = require("../src/jobs/queue");
 
 async function resetDb() {
-  // CASCADE also clears BookingHistory, Review and the implicit
-  // Staff<->Service / Package<->Service join tables.
+  // CASCADE also clears history, reviews and the implicit join tables.
   await prisma.$executeRawUnsafe(
     'TRUNCATE "Booking", "Staff", "Service", "Package", "AdminUser", "Transformation" CASCADE',
   );
-  await redis.flushdb(); // OTPs, rate-limit counters, sessions, queued jobs
+  await redis.flushdb();
 }
 
 function createService(overrides = {}) {
   return prisma.service.create({
-    data: {
-      name: "Bridal Makeup",
-      price: "5000",
-      durationMinutes: 60,
-      ...overrides,
-    },
+    data: { name: "Bridal Makeup", price: "5000", durationMinutes: 60, ...overrides },
   });
 }
 
@@ -37,41 +29,25 @@ function createStaff(services = [], overrides = {}) {
   });
 }
 
-async function createAdmin(
-  email = "admin@test.local",
-  password = "correct-horse-battery",
-) {
-  const passwordHash = await bcrypt.hash(password, 4); // low cost: fast tests
-  await prisma.adminUser.create({
-    data: { email, passwordHash, role: "admin" },
-  });
+async function createAdmin(email = "admin@test.local", password = "correct-horse-battery") {
+  const passwordHash = await bcrypt.hash(password, 4);
+  await prisma.adminUser.create({ data: { email, passwordHash, role: "admin" } });
   return { email, password };
 }
 
-// Same token POST /api/otp/verify issues. Lets booking tests skip the OTP
-// round-trip; the real round-trip is covered in otpFlow.test.js.
-function verificationToken(
-  contact,
-  purpose = "booking_create",
-  secret = process.env.JWT_SECRET,
-) {
+// Same token POST /api/otp/verify issues; otpFlow.test.js covers the real flow.
+function verificationToken(contact, purpose = "booking_create", secret = process.env.JWT_SECRET) {
   return jwt.sign({ contact, purpose }, secret, { expiresIn: "10m" });
 }
 
 function adminToken(overrides = {}, secret = process.env.JWT_SECRET) {
   return jwt.sign(
-    {
-      sub: "test-admin",
-      email: "admin@test.local",
-      role: "admin",
-      ...overrides,
-    },
+    { sub: "test-admin", email: "admin@test.local", role: "admin", ...overrides },
     secret,
     { expiresIn: "1h", algorithm: "HS256" },
   );
 }
 
-// A fixed slot a few days ahead, so tests don't depend on the current time.
 function futureSlot(daysAhead = 3, hourUtc = 5) {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() + daysAhead);
@@ -94,10 +70,7 @@ function bookingPayload(service, overrides = {}) {
 }
 
 async function closeAll() {
-  await Promise.allSettled([
-    notificationsQueue.close(),
-    maintenanceQueue.close(),
-  ]);
+  await Promise.allSettled([notificationsQueue.close(), maintenanceQueue.close()]);
   await prisma.$disconnect();
   await redis.quit();
 }

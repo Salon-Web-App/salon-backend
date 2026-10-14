@@ -1,15 +1,13 @@
-// The actual work done for each queued notification job. Kept separate
-// from worker.js so it can be unit-tested without spinning up a Worker.
 const prisma = require("../lib/prisma");
+const logger = require("../lib/logger");
 const { sendSms } = require("../lib/twilio");
 const { sendEmail } = require("../lib/brevo");
-const logger = require("../lib/logger");
 
 const TEMPLATES = {
   "booking.created": (b) => ({
     sms: `Booking confirmed! Your application ID is ${b.applicationId}. See you on ${b.startTime.toLocaleString()}.`,
     subject: "Your booking is confirmed",
-    html: `<p>Your application ID is <strong>${b.applicationId}</strong>.</p><p>Appointment: ${b.startTime.toLocaleString()} for ${b.service.name}.</p>`,
+    html: `<p>Your application ID is <strong>${b.applicationId}</strong>.</p><p>Appointment: ${b.startTime.toLocaleString()} for ${b.service?.name ?? b.package?.title}.</p>`,
   }),
   "booking.modified": (b) => ({
     sms: `Your booking ${b.applicationId} was updated. New time: ${b.startTime.toLocaleString()}.`,
@@ -47,10 +45,10 @@ async function processNotificationJob(job) {
   const { name, data } = job;
   const booking = await prisma.booking.findUnique({
     where: { id: data.bookingId },
-    include: { service: true, staff: true },
+    include: { service: true, package: true, staff: true },
   });
 
-  if (!booking) return; // booking may have been deleted; nothing to notify
+  if (!booking) return;
 
   const template = TEMPLATES[name];
   if (!template) return;
@@ -72,20 +70,13 @@ async function processNotificationJob(job) {
 
   for (const { channel, r } of failed) {
     logger.error(
-      {
-        err: r.reason,
-        channel,
-        jobId: job.id,
-        type: name,
-        applicationId: booking.applicationId,
-      },
+      { err: r.reason, channel, jobId: job.id, type: name, applicationId: booking.applicationId },
       "notification delivery failed",
     );
   }
 
-  // Every channel failed: throw so BullMQ retries (attempts: 3, backoff).
-  // Partial failure doesn't throw — a retry would re-send the channel
-  // that already succeeded.
+  // Only retry when nothing went out; a retry after a partial failure would
+  // re-send the channel that succeeded.
   if (attempts.length && failed.length === attempts.length) {
     throw new Error(`All notification channels failed for job ${job.id}`);
   }

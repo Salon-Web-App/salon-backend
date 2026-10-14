@@ -1,5 +1,3 @@
-// Structured JSON logs to stdout, one object per line — what CloudWatch Logs
-// Insights queries. Pretty-printed locally when pino-pretty is installed.
 const os = require("node:os");
 const pino = require("pino");
 
@@ -20,13 +18,12 @@ const transport = devTransport();
 module.exports = pino({
   level: process.env.LOG_LEVEL || (isProd ? "info" : "debug"),
   base: {
-    service: process.env.SERVICE_NAME || "api", // "api" | "worker" | "migrate"
-    hostname: os.hostname(), // which container/task wrote it
+    service: process.env.SERVICE_NAME || "api",
+    hostname: os.hostname(),
     pid: process.pid,
   },
-  timestamp: pino.stdTimeFunctions.isoTime, // "2026-10-13T17:05:00.000Z", not epoch ms
-  // String levels ("error") instead of numbers (50) make queries readable.
-  // pino can't combine this with a transport, so only in JSON mode.
+  timestamp: pino.stdTimeFunctions.isoTime,
+  // pino can't use a custom level formatter together with a transport.
   ...(transport
     ? { transport }
     : { formatters: { level: (label) => ({ level: label }) } }),

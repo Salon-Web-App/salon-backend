@@ -1,6 +1,4 @@
-// Queues a reminder for every active booking that starts "tomorrow" in the
-// business timezone. Relies on the process TZ (set TZ=Asia/Kathmandu on the
-// worker) so setHours/setDate operate in local business time.
+// Relies on the process TZ being the business timezone.
 const prisma = require("../lib/prisma");
 const { enqueueNotification } = require("./queue");
 const logger = require("../lib/logger");
@@ -11,7 +9,7 @@ async function enqueueTomorrowReminders() {
   start.setHours(0, 0, 0, 0);
 
   const end = new Date(start);
-  end.setDate(end.getDate() + 1); // next midnight, used with lt (no 23:59:59.999 edge)
+  end.setDate(end.getDate() + 1);
 
   const bookings = await prisma.booking.findMany({
     where: {
@@ -22,8 +20,8 @@ async function enqueueTomorrowReminders() {
     select: { id: true },
   });
 
-  // jobId includes the date so a booking rescheduled to another day still
-  // gets its new reminder, but the same day can never be reminded twice.
+  // Date in the id: a booking moved to another day still gets a reminder,
+  // but never two for the same day.
   const day = start.toISOString().slice(0, 10);
   for (const b of bookings) {
     await enqueueNotification(

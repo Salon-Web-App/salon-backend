@@ -1,4 +1,3 @@
-// Masks contact details for logs: enough to correlate, not enough to identify.
 function maskContact(value) {
   if (!value || typeof value !== "string") return value;
   if (value.includes("@")) {

@@ -1,4 +1,4 @@
-.PHONY: up down migrate seed db-status logs
+.PHONY: up down migrate seed db-status logs test stack-up stack-down stack-logs stack-reset
 
 up:
 	docker compose up -d db redis
@@ -23,3 +23,15 @@ logs:
 test:
 	docker compose --profile test run --rm test
 	docker compose --profile test rm -sf db-test redis-test
+
+stack-up:
+	cd stack && docker compose up -d --build
+
+stack-down:
+	cd stack && docker compose down
+
+stack-logs:
+	cd stack && docker compose logs -f --no-log-prefix backend worker | npx pino-pretty
+
+stack-reset:
+	cd stack && docker compose down -v

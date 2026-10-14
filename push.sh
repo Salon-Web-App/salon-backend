@@ -1,4 +1,5 @@
-
+#!/usr/bin/env bash
+# TODO: replace with CI pipeline.
 set -euo pipefail
 
 REGION="ap-south-1"
@@ -6,6 +7,7 @@ ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
 REGISTRY="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
 REPO="${REGISTRY}/salon-app"
 
+# The SHA tag must match the code in the image.
 if [ -n "$(git status --porcelain)" ]; then
   echo "Working tree is dirty. Commit or stash before pushing." >&2
   exit 1
@@ -19,6 +21,7 @@ aws ecr get-login-password --region "$REGION" \
 docker build --target runtime --build-arg GIT_SHA="$SHA" \
   -t "${REPO}:backend-${SHA}" .
 
+# v1 still pulls app-/worker- tags; same image, extra names.
 docker tag "${REPO}:backend-${SHA}" "${REPO}:app-${SHA}"
 docker tag "${REPO}:backend-${SHA}" "${REPO}:worker-${SHA}"
 
