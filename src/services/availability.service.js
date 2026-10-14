@@ -1,101 +1,74 @@
-// Computes free time slots across staff members qualified for the given
-// service, for a given date. It reads each qualifying staff's workingHours
-// JSON, subtracts their existing bookings for that day, and deduplicates
-// the available times.
+// Free slots for a service or package on a date, across all qualified staff.
+// Times are built in the process timezone, so TZ must be the business
+// timezone.
 const prisma = require("../lib/prisma");
+const { resolveOffering, qualifiedStaffWhere } = require("./catalog.service");
 
 const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const SLOT_STEP_MINUTES = 30;
-
-function parseRange(range) {
-  const [start, end] = range.split("-");
-  return { start, end };
-}
 
 function toDate(dateStr, hhmm) {
   return new Date(`${dateStr}T${hhmm}:00`);
 }
 
-async function getAvailableSlots({ serviceId, date }) {
-  // Only fetch staff who are actually linked to this service, plus the
-  // service itself, concurrently.
-  const [staffForService, service] = await Promise.all([
-    prisma.staff.findMany({
-      where: {
-        active: true,
-        services: { some: { id: serviceId } },
-      },
-    }),
-    prisma.service.findUnique({ where: { id: serviceId } }),
-  ]);
-
-  if (!service) {
-    const err = new Error("Service not found");
-    err.status = 404;
-    err.expose = true;
-    throw err;
+function parseWorkingHours(value) {
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
   }
+}
 
-  const weekday = WEEKDAYS[new Date(date).getDay()];
+async function getAvailableSlots({ serviceId, packageId, staffId, date }) {
+  const offering = await resolveOffering({ serviceId, packageId });
 
-  if (staffForService.length === 0) {
-    return []; // nobody offers this service — nothing to compute
-  }
+  const staffList = await prisma.staff.findMany({
+    where: { ...qualifiedStaffWhere(offering), ...(staffId && { id: staffId }) },
+  });
+  if (staffList.length === 0) return [];
 
-  const staffIds = staffForService.map((s) => s.id);
+  const dayStart = toDate(date, "00:00");
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+  const weekday = WEEKDAYS[dayStart.getDay()];
 
-  // Fetch existing bookings for this date, scoped to only the staff who
-  // provide this service.
   const existingBookings = await prisma.booking.findMany({
     where: {
+      deletedAt: null,
       status: { notIn: ["cancelled"] },
-      staffId: { in: staffIds },
-      startTime: {
-        gte: new Date(`${date}T00:00:00`),
-        lt: new Date(`${date}T23:59:59`),
-      },
+      staffId: { in: staffList.map((s) => s.id) },
+      startTime: { lt: dayEnd },
+      endTime: { gt: dayStart },
     },
     select: { staffId: true, startTime: true, endTime: true },
   });
 
-  const availableSlotsMap = new Map();
-  const durationMs = service.durationMinutes * 60 * 1000;
+  const durationMs = offering.durationMinutes * 60 * 1000;
   const now = new Date();
+  const slots = new Map();
 
-  for (const staff of staffForService) {
-    let workingHours = staff.workingHours;
-
-    if (typeof workingHours === "string") {
-      try {
-        workingHours = JSON.parse(workingHours);
-      } catch {
-        continue;
-      }
-    }
-
-    const ranges = workingHours?.[weekday] || [];
-    if (ranges.length === 0) continue;
-
+  for (const staff of staffList) {
+    const ranges = parseWorkingHours(staff.workingHours)?.[weekday] || [];
     const staffBookings = existingBookings.filter((b) => b.staffId === staff.id);
 
     for (const range of ranges) {
-      const { start, end } = parseRange(range);
-      let cursor = toDate(date, start);
+      const [start, end] = range.split("-");
       const rangeEnd = toDate(date, end);
+      let cursor = toDate(date, start);
 
       while (cursor.getTime() + durationMs <= rangeEnd.getTime()) {
         const slotStart = cursor;
         const slotEnd = new Date(cursor.getTime() + durationMs);
-        const isoTime = slotStart.toISOString();
+        const key = slotStart.toISOString();
 
-        if (slotStart > now) {
+        if (slotStart > now && !slots.has(key)) {
           const overlaps = staffBookings.some(
             (b) => slotStart < b.endTime && slotEnd > b.startTime,
           );
-
-          if (!overlaps && !availableSlotsMap.has(isoTime)) {
-            availableSlotsMap.set(isoTime, {
-              startTime: isoTime,
+          if (!overlaps) {
+            slots.set(key, {
+              startTime: key,
               endTime: slotEnd.toISOString(),
               staffId: staff.id,
             });
@@ -107,11 +80,7 @@ async function getAvailableSlots({ serviceId, date }) {
     }
   }
 
-  const slots = Array.from(availableSlotsMap.values()).sort(
-    (a, b) => new Date(a.startTime) - new Date(b.startTime),
-  );
-
-  return slots;
+  return Array.from(slots.values()).sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 }
 
 module.exports = { getAvailableSlots };

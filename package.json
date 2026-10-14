@@ -29,7 +29,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -63,7 +63,6 @@
     "twilio": "^5.2.3"
   },
   "devDependencies": {
-    "@adminjs/bundler": "^3.0.0",
     "@eslint/js": "^9.39.5",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",

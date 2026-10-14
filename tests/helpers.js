@@ -5,6 +5,10 @@ const prisma = require("../src/lib/prisma");
 const redis = require("../src/lib/redis");
 const { notificationsQueue, maintenanceQueue } = require("../src/jobs/queue");
 
+const ALL_WEEK = Object.fromEntries(
+  ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((d) => [d, ["09:00-18:00"]]),
+);
+
 async function resetDb() {
   // CASCADE also clears history, reviews and the implicit join tables.
   await prisma.$executeRawUnsafe(
@@ -19,12 +23,56 @@ function createService(overrides = {}) {
   });
 }
 
+function createPackage(services = [], overrides = {}) {
+  return prisma.package.create({
+    data: {
+      title: "Bridal Package",
+      originalPrice: "9000",
+      offerPrice: "7500",
+      durationMinutes: 90,
+      services: { connect: services.map((s) => ({ id: s.id })) },
+      ...overrides,
+    },
+  });
+}
+
 function createStaff(services = [], overrides = {}) {
   return prisma.staff.create({
     data: {
       name: "Asha",
+      workingHours: ALL_WEEK,
       services: { connect: services.map((s) => ({ id: s.id })) },
       ...overrides,
+    },
+  });
+}
+
+let bookingSeq = 0;
+function createBookingRow({
+  serviceId = null,
+  packageId = null,
+  staffId = null,
+  start,
+  minutes = 60,
+  status = "confirmed",
+  deletedAt = null,
+  customerName = "Test Customer",
+} = {}) {
+  bookingSeq += 1;
+  const startTime = new Date(start);
+  return prisma.booking.create({
+    data: {
+      applicationId: `APP-T${Date.now().toString(36)}${bookingSeq}`.toUpperCase(),
+      customerName,
+      customerPhone: "+9779800000001",
+      customerEmail: "customer@test.local",
+      serviceId,
+      packageId,
+      staffId,
+      startTime,
+      endTime: new Date(startTime.getTime() + minutes * 60 * 1000),
+      status,
+      deletedAt,
     },
   });
 }
@@ -55,6 +103,18 @@ function futureSlot(daysAhead = 3, hourUtc = 5) {
   return d.toISOString();
 }
 
+// YYYY-MM-DD in the process (business) timezone.
+function localDate(daysAhead = 3) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  return d.toLocaleDateString("en-CA");
+}
+
+// ISO timestamp for a local wall-clock time on a given YYYY-MM-DD.
+function localTime(date, hhmm) {
+  return new Date(`${date}T${hhmm}:00`).toISOString();
+}
+
 function bookingPayload(service, overrides = {}) {
   const customerPhone = overrides.customerPhone || "+9779800000001";
   return {
@@ -82,11 +142,15 @@ module.exports = {
   notificationsQueue,
   resetDb,
   createService,
+  createPackage,
   createStaff,
+  createBookingRow,
   createAdmin,
   verificationToken,
   adminToken,
   futureSlot,
+  localDate,
+  localTime,
   bookingPayload,
   closeAll,
 };

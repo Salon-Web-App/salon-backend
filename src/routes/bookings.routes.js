@@ -5,15 +5,25 @@ const bookingsController = require("../controllers/bookings.controller");
 const { validate } = require("../middlewares/validate.middleware");
 const { bookingWriteLimiter, publicReadLimiter } = require("../middlewares/rateLimit.middleware");
 
+const exactlyOneOffering = body().custom((b) => {
+  if (Boolean(b.serviceId) === Boolean(b.packageId)) {
+    throw new Error("Provide exactly one of serviceId or packageId");
+  }
+  return true;
+});
+
 router.post(
   "/",
   bookingWriteLimiter,
   [
-    body("customerName").notEmpty(),
-    body("customerPhone").notEmpty(),
+    body("customerName").trim().notEmpty(),
+    body("customerPhone").trim().notEmpty(),
     body("customerEmail").isEmail(),
-    body("serviceId").notEmpty(),
+    body("serviceId").optional().isString(),
+    body("packageId").optional().isString(),
+    exactlyOneOffering,
     body("startTime").isISO8601(),
+    body("notes").optional().isString().isLength({ max: 1000 }),
     body("verificationToken").notEmpty(),
     body("verifiedContact").notEmpty(),
   ],

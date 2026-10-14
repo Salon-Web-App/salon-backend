@@ -3,20 +3,12 @@
 const bookingService = require("../services/booking.service");
 const otpService = require("../services/otp.service");
 const availabilityService = require("../services/availability.service");
-const prisma = require("../lib/prisma");
+const { resolveOffering } = require("../services/catalog.service");
 
 async function getAvailability(req, res, next) {
   try {
-    const { serviceId, date } = req.query;
-
-    if (!serviceId || !date) {
-      const err = new Error("serviceId and date are required query parameters");
-      err.status = 400;
-      err.expose = true;
-      throw err;
-    }
-
-    const slots = await availabilityService.getAvailableSlots({ serviceId, date });
+    const { serviceId, packageId, date } = req.query;
+    const slots = await availabilityService.getAvailableSlots({ serviceId, packageId, date });
     res.json(slots);
   } catch (err) {
     next(err);
@@ -42,46 +34,22 @@ async function create(req, res, next) {
       purpose: "booking_create",
     });
 
+    const offering = await resolveOffering({ serviceId, packageId });
+
     const start = new Date(startTime);
+    const end = new Date(start.getTime() + offering.durationMinutes * 60 * 1000);
 
-    const service = serviceId
-      ? await prisma.service.findUnique({
-          where: { id: serviceId },
-          select: { durationMinutes: true },
-        })
-      : null;
-    const packageData = packageId
-      ? await prisma.package.findUnique({
-          where: { id: packageId },
-          select: { durationMinutes: true },
-        })
-      : null;
-
-    if (!service && !packageData) {
-      return res.status(400).json({ message: "Invalid package or service" });
+    const staff = await bookingService.availableStaff(offering, start, end);
+    if (staff.length === 0) {
+      return res.status(409).json({ error: "No staff member is available for the selected time" });
     }
-
-    const durationMinutes = packageData?.durationMinutes ?? service?.durationMinutes;
-    if (!durationMinutes) {
-      return res.status(400).json({ message: "Unable to determine booking duration" });
-    }
-    const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
-
-    const staffs = await bookingService.availableStaff(serviceId, start, end);
-    if (!staffs || staffs.length === 0) {
-      return res.status(409).json({
-        message: "No staff member is available for the selected time",
-      });
-    }
-    const staffId = staffs[0].id;
 
     const booking = await bookingService.createBooking({
+      offering,
+      staffId: staff[0].id,
       customerName,
       customerPhone,
       customerEmail,
-      serviceId,
-      packageId,
-      staffId,
       startTime,
       verifiedContact,
       notes,

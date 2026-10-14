@@ -1,14 +1,31 @@
-// Admin management of bookings: view/filter all bookings, assign staff,
-// change status, and reschedule. Every mutation logs to BookingHistory and
-// enqueues a customer notification, mirroring the customer-facing flow.
+// Admin booking management over the JWT API. Applies the same rules as the
+// backoffice actions: completed bookings are locked, staff can't be
+// double-booked, and every change is logged and notified.
 const prisma = require("../../lib/prisma");
 const { enqueueNotification } = require("../../jobs/queue");
+const { httpError } = require("../../utils/httpError");
+const {
+  assertEditable,
+  durationFor,
+  findStaffConflict,
+} = require("../../services/booking.service");
+
+const ADMIN_STATUSES = ["confirmed", "cancelled", "completed"];
+
+async function loadBooking(id) {
+  const booking = await prisma.booking.findUnique({
+    where: { id },
+    include: { service: true, package: true },
+  });
+  if (!booking || booking.deletedAt) throw httpError(404, "Booking not found");
+  return booking;
+}
 
 async function list(req, res, next) {
   try {
     const { status, staffId, from, to } = req.query;
 
-    const where = {};
+    const where = { deletedAt: null };
     if (status) where.status = status;
     if (staffId) where.staffId = staffId;
     if (from || to) {
@@ -19,7 +36,7 @@ async function list(req, res, next) {
 
     const bookings = await prisma.booking.findMany({
       where,
-      include: { service: true, staff: true },
+      include: { service: true, package: true, staff: true },
       orderBy: { startTime: "asc" },
     });
 
@@ -34,8 +51,19 @@ async function assignStaff(req, res, next) {
     const { id } = req.params;
     const { staffId } = req.body;
 
-    const existing = await prisma.booking.findUnique({ where: { id } });
-    if (!existing) return res.status(404).json({ error: "Booking not found" });
+    const existing = await loadBooking(id);
+    assertEditable(existing);
+
+    const staff = await prisma.staff.findUnique({ where: { id: staffId } });
+    if (!staff || !staff.active) throw httpError(400, "Staff member not found or inactive");
+
+    const conflict = await findStaffConflict({
+      staffId,
+      start: existing.startTime,
+      end: existing.endTime,
+      excludeId: id,
+    });
+    if (conflict) throw httpError(409, "This staff member is already booked at that time.");
 
     const updated = await prisma.$transaction(async (tx) => {
       const result = await tx.booking.update({
@@ -64,10 +92,12 @@ async function assignStaff(req, res, next) {
 async function changeStatus(req, res, next) {
   try {
     const { id } = req.params;
-    const { status } = req.body; // "confirmed" | "completed" | "cancelled"
+    const { status } = req.body;
 
-    const existing = await prisma.booking.findUnique({ where: { id } });
-    if (!existing) return res.status(404).json({ error: "Booking not found" });
+    const existing = await loadBooking(id);
+    // Admins may restore a cancelled booking, but completed is final.
+    assertEditable(existing, { allowCancelled: true });
+    if (existing.status === status) return res.json(existing);
 
     const updated = await prisma.$transaction(async (tx) => {
       const result = await tx.booking.update({ where: { id }, data: { status } });
@@ -98,11 +128,23 @@ async function reschedule(req, res, next) {
     const { id } = req.params;
     const { startTime } = req.body;
 
-    const existing = await prisma.booking.findUnique({ where: { id }, include: { service: true } });
-    if (!existing) return res.status(404).json({ error: "Booking not found" });
+    const existing = await loadBooking(id);
+    assertEditable(existing);
 
     const newStart = new Date(startTime);
-    const newEnd = new Date(newStart.getTime() + existing.service.durationMinutes * 60 * 1000);
+    const newEnd = new Date(newStart.getTime() + durationFor(existing) * 60 * 1000);
+
+    if (
+      existing.staffId &&
+      (await findStaffConflict({
+        staffId: existing.staffId,
+        start: newStart,
+        end: newEnd,
+        excludeId: id,
+      }))
+    ) {
+      throw httpError(409, "The assigned staff member is already booked at that time.");
+    }
 
     const updated = await prisma.$transaction(async (tx) => {
       const result = await tx.booking.update({
@@ -128,4 +170,4 @@ async function reschedule(req, res, next) {
   }
 }
 
-module.exports = { list, assignStaff, changeStatus, reschedule };
+module.exports = { list, assignStaff, changeStatus, reschedule, ADMIN_STATUSES };

@@ -74,12 +74,12 @@ describe("POST /api/bookings", () => {
     expect(res.status).toBe(401);
   });
 
-  test("unknown service -> 400", async () => {
+  test("unknown service -> 404", async () => {
     const service = await createService();
     const res = await create(
       bookingPayload(service, { serviceId: "00000000-0000-0000-0000-000000000000" }),
     );
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(404);
   });
 
   test("no staff offers the service -> 409", async () => {

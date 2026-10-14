@@ -8,7 +8,11 @@ const { reviewWriteLimiter, publicReadLimiter } = require("../middlewares/rateLi
 router.post(
   "/",
   reviewWriteLimiter,
-  [body("applicationId").notEmpty(), body("rating").isInt({ min: 1, max: 5 })],
+  [
+    body("applicationId").trim().notEmpty(),
+    body("rating").isInt({ min: 1, max: 5 }),
+    body("comment").optional({ values: "falsy" }).isString().isLength({ max: 1000 }),
+  ],
   validate,
   reviewsController.create,
 );
