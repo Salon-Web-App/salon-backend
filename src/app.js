@@ -170,7 +170,9 @@ async function buildApp() {
   );
 
   // Must be mounted before the 404 handler — see comment above.
-  await mountAdminPanel(app);
+  if (process.env.NODE_ENV !== "test") {
+    await mountAdminPanel(app);
+  }
 
   // 404 for anything unmatched
   app.use((req, res) => res.status(404).json({ error: "Not found" }));

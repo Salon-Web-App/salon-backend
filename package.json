@@ -15,7 +15,9 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:status": "prisma migrate status",
     "db:seed": "node prisma/seed.js",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "test": "jest --runInBand",
+    "test:coverage": "jest --runInBand --coverage"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -50,8 +52,10 @@
   },
   "devDependencies": {
     "@adminjs/bundler": "^3.0.0",
+    "jest": "^30.5.2",
     "nodemon": "^3.1.4",
     "pino-pretty": "^13.2.0",
-    "prisma": "5.22.0"
+    "prisma": "5.22.0",
+    "supertest": "^7.3.1"
   }
 }

@@ -89,6 +89,59 @@ services:
     profiles: ["tools"]
     restart: "no"
 
+  db-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: salon_test
+    tmpfs:
+      - /var/lib/postgresql/data # in memory: fast, wiped on stop
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d salon_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+    profiles: ["test"]
+
+  redis-test:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    profiles: ["test"]
+
+  test:
+    build:
+      context: .
+      target: dev
+    image: salon-backend:dev
+    command: npm test
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      NODE_ENV: test
+      SERVICE_NAME: test
+      LOG_LEVEL: silent
+      TZ: Asia/Kathmandu
+      BUSINESS_TZ: Asia/Kathmandu
+      DATABASE_URL: postgresql://test:test@db-test:5432/salon_test
+      REDIS_URL: redis://redis-test:6379
+      JWT_SECRET: test-jwt-secret
+      ADMIN_SESSION_SECRET: test-session-secret-not-for-real-use
+      FRONTEND_ORIGIN: http://localhost
+      CLOUDINARY_CLOUD_NAME: test
+      CLOUDINARY_API_KEY: test
+      CLOUDINARY_API_SECRET: test
+      EMAIL_MODE: log
+      SMS_MODE: log
+      # + a dummy value for every other var in src/config.js `required`
+    depends_on:
+      db-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_started
+    profiles: ["test"]
+
 volumes:
   pgdata:
   redisdata:

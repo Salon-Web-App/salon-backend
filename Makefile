@@ -19,3 +19,7 @@ db-status:
 
 logs:
 	docker compose logs -f app worker
+
+test:
+	docker compose --profile test run --rm test
+	docker compose --profile test rm -sf db-test redis-test

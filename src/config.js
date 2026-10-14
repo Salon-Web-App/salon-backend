@@ -1,5 +1,6 @@
 // src/config.js
-if (process.env.NODE_ENV !== "production") require("dotenv").config();
+if (!["production", "test"].includes(process.env.NODE_ENV))
+  require("dotenv").config();
 
 const required = [
   "DATABASE_URL",

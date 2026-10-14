@@ -6,7 +6,7 @@ const pino = require("pino");
 const isProd = process.env.NODE_ENV === "production";
 
 function devTransport() {
-  if (isProd) return undefined;
+  if (isProd || process.env.NODE_ENV === "test") return undefined;
   try {
     require.resolve("pino-pretty");
     return { target: "pino-pretty", options: { colorize: true } };
