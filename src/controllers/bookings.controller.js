@@ -76,10 +76,12 @@ async function create(req, res, next) {
     const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
 
     const staffs = await bookingService.availableStaff(serviceId, start, end);
+
     if (!staffs || staffs.length === 0)
       return res.status(409).json({
         message: "No staff member is available for the selected time",
       });
+    const staffId = staffs[0].id;
 
     const booking = await bookingService.createBooking({
       customerName,

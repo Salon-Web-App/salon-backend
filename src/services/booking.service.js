@@ -224,20 +224,14 @@ async function availableStaff(serviceID, start, end) {
         },
       }),
 
-      // bookings: {
-      //   none: {
-      //     deletedAt: null,
-      //     status: {
-      //       notIn: ["cancelled"],
-      //     },
-      //     startTime: {
-      //       lt: end,
-      //     },
-      //     endTime: {
-      //       gt: start,
-      //     },
-      //   },
-      // },
+      bookings: {
+        none: {
+          deletedAt: null,
+          status: { notIn: ["cancelled"] },
+          startTime: { lt: end },
+          endTime: { gt: start },
+        },
+      },
     },
 
     select: {
@@ -245,11 +239,6 @@ async function availableStaff(serviceID, start, end) {
       name: true,
     },
   });
-  // if (availibleStaffs.length === 0) {
-  //   return res.status(409).json({
-  //     message: "No staff member is available for the selected time",
-  //   });
-  // }
   return availibleStaffs;
 }
 module.exports = {
