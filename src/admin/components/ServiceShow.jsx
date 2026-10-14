@@ -136,9 +136,7 @@ const ServiceShow = (props) => {
         if (cancelled) return;
         const names = (res?.data?.records || [])
           .filter((s) =>
-            (Array.isArray(s.params?.services) ? s.params.services : []).includes(
-              params.id,
-            ),
+            (Array.isArray(s.params?.services) ? s.params.services : []).includes(params.id),
           )
           .map((s) => s.params?.name)
           .filter(Boolean);
@@ -163,19 +161,14 @@ const ServiceShow = (props) => {
         <div>
           <h1 style={styles.name}>{params.name || "Unnamed service"}</h1>
           {params.category && (
-            <div style={{ fontSize: 14, color: "#8892a6", marginTop: 4 }}>
-              {params.category}
-            </div>
+            <div style={{ fontSize: 14, color: "#8892a6", marginTop: 4 }}>{params.category}</div>
           )}
           <span style={styles.statusBadge(params.active)}>
             {params.active ? "Active" : "Inactive"}
           </span>
         </div>
         <div style={styles.headerActions}>
-          <a
-            href={`${resource?.href || ""}/records/${params.id}/edit`}
-            style={styles.editBtn}
-          >
+          <a href={`${resource?.href || ""}/records/${params.id}/edit`} style={styles.editBtn}>
             Edit
           </a>
         </div>
@@ -190,22 +183,16 @@ const ServiceShow = (props) => {
           </div>
           <div>
             <div style={styles.infoLabel}>Duration</div>
-            <div style={styles.infoValue}>
-              {formatDuration(params.durationMinutes)}
-            </div>
+            <div style={styles.infoValue}>{formatDuration(params.durationMinutes)}</div>
           </div>
           <div>
             <div style={styles.infoLabel}>Icon</div>
-            <div style={styles.infoValue}>
-              {ICON_LABELS[params.icon] || params.icon || "—"}
-            </div>
+            <div style={styles.infoValue}>{ICON_LABELS[params.icon] || params.icon || "—"}</div>
           </div>
           <div>
             <div style={styles.infoLabel}>Created</div>
             <div style={styles.infoValue}>
-              {params.createdAt
-                ? new Date(params.createdAt).toLocaleDateString()
-                : "—"}
+              {params.createdAt ? new Date(params.createdAt).toLocaleDateString() : "—"}
             </div>
           </div>
         </div>

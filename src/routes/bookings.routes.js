@@ -3,10 +3,7 @@ const { body } = require("express-validator");
 const router = express.Router();
 const bookingsController = require("../controllers/bookings.controller");
 const { validate } = require("../middlewares/validate.middleware");
-const {
-  bookingWriteLimiter,
-  publicReadLimiter,
-} = require("../middlewares/rateLimit.middleware");
+const { bookingWriteLimiter, publicReadLimiter } = require("../middlewares/rateLimit.middleware");
 
 router.post(
   "/",
@@ -29,10 +26,7 @@ router.get("/:applicationId", publicReadLimiter, bookingsController.getStatus);
 router.post(
   "/:applicationId/request-otp",
   bookingWriteLimiter,
-  [
-    body("channel").optional().isIn(["sms", "email"]),
-    body("contact").notEmpty(),
-  ],
+  [body("channel").optional().isIn(["sms", "email"]), body("contact").notEmpty()],
   validate,
   bookingsController.requestModifyOtp,
 );

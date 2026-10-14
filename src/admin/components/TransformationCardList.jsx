@@ -15,9 +15,7 @@ const MOBILE_BREAKPOINT = 768;
 function useIsMobile(breakpoint = MOBILE_BREAKPOINT) {
   const query = `(max-width: ${breakpoint}px)`;
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" && window.matchMedia
-      ? window.matchMedia(query).matches
-      : false,
+    typeof window !== "undefined" && window.matchMedia ? window.matchMedia(query).matches : false,
   );
 
   useEffect(() => {
@@ -188,8 +186,7 @@ const TransformationCardList = (props) => {
                 style={styles.card(isMobile)}
                 onClick={() => goToShow(p.id)}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow =
-                    "0 2px 8px rgba(0,0,0,0.06)";
+                  e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)";
                   e.currentTarget.style.borderColor = "#c9cedb";
                 }}
                 onMouseLeave={(e) => {
@@ -222,9 +219,7 @@ const TransformationCardList = (props) => {
                       {p.active ? "Active" : "Inactive"}
                     </span>
                   </div>
-                  {p.category && (
-                    <div style={styles.category}>{p.category}</div>
-                  )}
+                  {p.category && <div style={styles.category}>{p.category}</div>}
                   <span style={styles.orderChip}>Order: {p.order ?? 0}</span>
                 </div>
               </div>

@@ -15,9 +15,7 @@ const MOBILE_BREAKPOINT = 768;
 function useIsMobile(breakpoint = MOBILE_BREAKPOINT) {
   const query = `(max-width: ${breakpoint}px)`;
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" && window.matchMedia
-      ? window.matchMedia(query).matches
-      : false,
+    typeof window !== "undefined" && window.matchMedia ? window.matchMedia(query).matches : false,
   );
 
   useEffect(() => {
@@ -56,15 +54,8 @@ function readArrayParam(record, propertyName) {
 
   const flatPrefix = `${propertyName}.`;
   return Object.keys(params)
-    .filter(
-      (key) =>
-        key.startsWith(flatPrefix) &&
-        /^\d+$/.test(key.slice(flatPrefix.length)),
-    )
-    .sort(
-      (a, b) =>
-        Number(a.slice(flatPrefix.length)) - Number(b.slice(flatPrefix.length)),
-    )
+    .filter((key) => key.startsWith(flatPrefix) && /^\d+$/.test(key.slice(flatPrefix.length)))
+    .sort((a, b) => Number(a.slice(flatPrefix.length)) - Number(b.slice(flatPrefix.length)))
     .map((key) => params[key])
     .filter((v) => v !== undefined && v !== null && v !== "");
 }
@@ -407,9 +398,7 @@ const PackageCardList = (props) => {
         });
       });
       Object.keys(byPackage).forEach((packageId) => {
-        byPackage[packageId].sort(
-          (a, b) => new Date(a.startTime) - new Date(b.startTime),
-        );
+        byPackage[packageId].sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
       });
       setBookingsByPackage(byPackage);
 
@@ -500,11 +489,7 @@ const PackageCardList = (props) => {
         </div>
 
         {hasActiveFilter && (
-          <button
-            type="button"
-            style={styles.clearFilter}
-            onClick={clearFilters}
-          >
+          <button type="button" style={styles.clearFilter} onClick={clearFilters}>
             Clear filter
           </button>
         )}
@@ -512,9 +497,7 @@ const PackageCardList = (props) => {
 
       {filteredRecords.length === 0 ? (
         <div style={styles.loading}>
-          {hasActiveFilter
-            ? "No packages match these filters."
-            : "No packages yet."}
+          {hasActiveFilter ? "No packages match these filters." : "No packages yet."}
         </div>
       ) : (
         <div style={styles.list}>
@@ -525,9 +508,7 @@ const PackageCardList = (props) => {
               .map((id) => services.find((s) => s.value === id)?.label)
               .filter(Boolean);
             const packageBookings = bookingsByPackage[p.id] || [];
-            const upcoming = packageBookings.filter((b) =>
-              isFutureBooking(b.startTime),
-            );
+            const upcoming = packageBookings.filter((b) => isFutureBooking(b.startTime));
             const visibleBookings = upcoming.slice(0, 4);
             const extraCount = upcoming.length - visibleBookings.length;
 
@@ -536,8 +517,7 @@ const PackageCardList = (props) => {
                 key={p.id}
                 style={styles.card(isMobile)}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow =
-                    "0 2px 8px rgba(0,0,0,0.06)";
+                  e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)";
                   e.currentTarget.style.borderColor = "#c9cedb";
                 }}
                 onMouseLeave={(e) => {
@@ -549,28 +529,17 @@ const PackageCardList = (props) => {
                   #{p.order ?? 0}
                 </span>
 
-                <div
-                  style={styles.mainClickable(isMobile)}
-                  onClick={() => goToShow(p.id)}
-                >
+                <div style={styles.mainClickable(isMobile)} onClick={() => goToShow(p.id)}>
                   <div style={styles.iconColumn}>
                     {p.imageUrl ? (
-                      <img
-                        src={p.imageUrl}
-                        alt={p.title}
-                        style={styles.avatar}
-                      />
+                      <img src={p.imageUrl} alt={p.title} style={styles.avatar} />
                     ) : (
                       <div style={styles.avatarPlaceholder}>
                         {(p.title || "?").slice(0, 1).toUpperCase()}
                       </div>
                     )}
-                    <span style={styles.iconChip}>
-                      {formatPrice(p.offerPrice)}
-                    </span>
-                    <span style={styles.iconChip}>
-                      {formatDuration(p.durationMinutes)}
-                    </span>
+                    <span style={styles.iconChip}>{formatPrice(p.offerPrice)}</span>
+                    <span style={styles.iconChip}>{formatDuration(p.durationMinutes)}</span>
                   </div>
                   <div style={styles.body}>
                     <div style={styles.topRow}>
@@ -579,9 +548,7 @@ const PackageCardList = (props) => {
                         {p.active ? "Active" : "Inactive"}
                       </span>
                       {p.discountLabel && (
-                        <span style={styles.discountBadge}>
-                          {p.discountLabel}
-                        </span>
+                        <span style={styles.discountBadge}>{p.discountLabel}</span>
                       )}
                     </div>
                     {p.description && (
@@ -592,9 +559,7 @@ const PackageCardList = (props) => {
                       </div>
                     )}
 
-                    {p.message && (
-                      <div style={styles.message}>{p.message}</div>
-                    )}
+                    {p.message && <div style={styles.message}>{p.message}</div>}
 
                     <div style={styles.sectionLabel}>Includes</div>
                     <div>
@@ -613,12 +578,8 @@ const PackageCardList = (props) => {
                 <div
                   style={styles.panel(isMobile)}
                   onClick={(e) => goToBookingsForPackage(e, p.id)}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "#f0f1f5")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "#fafbfc")
-                  }
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f1f5")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "#fafbfc")}
                   title="View bookings for this package"
                 >
                   <div style={styles.panelHeader}>
@@ -630,17 +591,11 @@ const PackageCardList = (props) => {
                     <>
                       {visibleBookings.map((b) => (
                         <div key={b.id} style={styles.bookingRow}>
-                          <span style={styles.bookingCustomer}>
-                            {b.customerName || "No name"}
-                          </span>
-                          <span style={styles.bookingDate}>
-                            {formatBookingDate(b.startTime)}
-                          </span>
+                          <span style={styles.bookingCustomer}>{b.customerName || "No name"}</span>
+                          <span style={styles.bookingDate}>{formatBookingDate(b.startTime)}</span>
                         </div>
                       ))}
-                      {extraCount > 0 && (
-                        <div style={styles.moreLink}>+{extraCount} more</div>
-                      )}
+                      {extraCount > 0 && <div style={styles.moreLink}>+{extraCount} more</div>}
                     </>
                   )}
 

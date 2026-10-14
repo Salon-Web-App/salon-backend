@@ -72,15 +72,8 @@ function readServiceIds(record, propertyName) {
 
   const flatPrefix = `${propertyName}.`;
   return Object.keys(params)
-    .filter(
-      (key) =>
-        key.startsWith(flatPrefix) &&
-        /^\d+$/.test(key.slice(flatPrefix.length)),
-    )
-    .sort(
-      (a, b) =>
-        Number(a.slice(flatPrefix.length)) - Number(b.slice(flatPrefix.length)),
-    )
+    .filter((key) => key.startsWith(flatPrefix) && /^\d+$/.test(key.slice(flatPrefix.length)))
+    .sort((a, b) => Number(a.slice(flatPrefix.length)) - Number(b.slice(flatPrefix.length)))
     .map((key) => params[key])
     .filter((v) => v !== undefined && v !== null && v !== "");
 }
@@ -303,12 +296,8 @@ const StaffEdit = (props) => {
     };
   }, []);
 
-  const selectedServices = allServices.filter((s) =>
-    selectedServiceIds.includes(s.value),
-  );
-  const availableServiceOptions = allServices.filter(
-    (s) => !selectedServiceIds.includes(s.value),
-  );
+  const selectedServices = allServices.filter((s) => selectedServiceIds.includes(s.value));
+  const availableServiceOptions = allServices.filter((s) => !selectedServiceIds.includes(s.value));
 
   function handleAddService(selected) {
     if (!selected) return;
@@ -468,10 +457,7 @@ const StaffEdit = (props) => {
               checked={fields.active}
               onChange={() => setField("active", !fields.active)}
             />
-            <label
-              htmlFor="staff-active"
-              style={{ fontSize: 13, color: "#555" }}
-            >
+            <label htmlFor="staff-active" style={{ fontSize: 13, color: "#555" }}>
               Active
             </label>
           </div>
@@ -531,9 +517,7 @@ const StaffEdit = (props) => {
         <Select
           isLoading={servicesLoading}
           placeholder={
-            availableServiceOptions.length
-              ? "Add a service…"
-              : "All services are already assigned"
+            availableServiceOptions.length ? "Add a service…" : "All services are already assigned"
           }
           options={availableServiceOptions}
           value={null}
@@ -552,9 +536,7 @@ const StaffEdit = (props) => {
                 <CheckBox
                   id={`wh-${day.key}`}
                   checked={schedule[day.key].enabled}
-                  onChange={() =>
-                    updateDay(day.key, "enabled", !schedule[day.key].enabled)
-                  }
+                  onChange={() => updateDay(day.key, "enabled", !schedule[day.key].enabled)}
                 />
                 <label htmlFor={`wh-${day.key}`} style={{ fontSize: 14 }}>
                   {day.label}
@@ -589,12 +571,7 @@ const StaffEdit = (props) => {
         >
           {saving ? "Saving…" : "Save Changes"}
         </button>
-        <button
-          type="button"
-          style={styles.cancelBtn}
-          disabled={saving}
-          onClick={handleCancel}
-        >
+        <button type="button" style={styles.cancelBtn} disabled={saving} onClick={handleCancel}>
           Cancel
         </button>
       </div>

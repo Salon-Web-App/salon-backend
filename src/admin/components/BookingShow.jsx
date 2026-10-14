@@ -351,8 +351,7 @@ const BookingShow = (props) => {
     }
   }
 
-  if (loading || !record)
-    return <div style={styles.loading}>Loading booking…</div>;
+  if (loading || !record) return <div style={styles.loading}>Loading booking…</div>;
 
   const p = record.params || {};
   const isCompleted = p.status === "completed";
@@ -390,34 +389,18 @@ const BookingShow = (props) => {
           <div>
             <h1 style={styles.name}>{p.customerName || "No name"}</h1>
             <div style={styles.appId}>{p.applicationId}</div>
-            <span style={styles.statusBadge(p.status)}>
-              {statusLabel(p.status)}
-            </span>
-            {p.deletedAt && (
-              <span style={{ ...styles.chip, marginLeft: 8 }}>Hidden</span>
-            )}
+            <span style={styles.statusBadge(p.status)}>{statusLabel(p.status)}</span>
+            {p.deletedAt && <span style={{ ...styles.chip, marginLeft: 8 }}>Hidden</span>}
           </div>
         </div>
         {isCompleted ? (
-          <div style={styles.completedNote}>
-            Completed — no changes possible.
-          </div>
+          <div style={styles.completedNote}>Completed — no changes possible.</div>
         ) : (
           <div className="bkd-header-actions" style={styles.headerActions}>
-            <button
-              type="button"
-              style={styles.topBtn}
-              disabled={busy}
-              onClick={handleCancel}
-            >
+            <button type="button" style={styles.topBtn} disabled={busy} onClick={handleCancel}>
               Cancel booking
             </button>
-            <button
-              type="button"
-              style={styles.topBtnGhost}
-              disabled={busy}
-              onClick={handleDelete}
-            >
+            <button type="button" style={styles.topBtnGhost} disabled={busy} onClick={handleDelete}>
               Delete
             </button>
           </div>
@@ -432,8 +415,7 @@ const BookingShow = (props) => {
           <div>
             <div style={styles.infoLabel}>Service</div>
             <div style={styles.infoValue}>
-              {serviceName ||
-                (p.serviceId ? `Unknown service (${p.serviceId})` : "—")}
+              {serviceName || (p.serviceId ? `Unknown service (${p.serviceId})` : "—")}
             </div>
           </div>
           <div>
@@ -441,13 +423,9 @@ const BookingShow = (props) => {
               <div style={styles.staticField}>
                 <div style={styles.infoLabel}>Staff</div>
                 {staffName ? (
-                  <div style={{ ...styles.infoValue, fontWeight: 600 }}>
-                    {staffName}
-                  </div>
+                  <div style={{ ...styles.infoValue, fontWeight: 600 }}>{staffName}</div>
                 ) : p.staffId ? (
-                  <div
-                    style={styles.empty}
-                  >{`Unknown staff (${p.staffId})`}</div>
+                  <div style={styles.empty}>{`Unknown staff (${p.staffId})`}</div>
                 ) : (
                   <div style={styles.empty}>Not assigned</div>
                 )}
@@ -456,9 +434,7 @@ const BookingShow = (props) => {
               <div
                 className="bkd-clickable-field"
                 style={styles.clickableField}
-                onClick={() =>
-                  setPanel(panel === "reassign" ? null : "reassign")
-                }
+                onClick={() => setPanel(panel === "reassign" ? null : "reassign")}
                 title="Click to reassign"
               >
                 <div style={styles.infoLabel}>Staff (click to change)</div>
@@ -473,9 +449,7 @@ const BookingShow = (props) => {
                     {staffName}
                   </div>
                 ) : p.staffId ? (
-                  <div
-                    style={styles.empty}
-                  >{`Unknown staff (${p.staffId})`}</div>
+                  <div style={styles.empty}>{`Unknown staff (${p.staffId})`}</div>
                 ) : (
                   <div style={styles.empty}>Not assigned</div>
                 )}
@@ -518,9 +492,7 @@ const BookingShow = (props) => {
               <div
                 className="bkd-clickable-field"
                 style={styles.clickableField}
-                onClick={() =>
-                  setPanel(panel === "reschedule" ? null : "reschedule")
-                }
+                onClick={() => setPanel(panel === "reschedule" ? null : "reschedule")}
                 title="Click to reschedule"
               >
                 <div style={styles.infoLabel}>Starts (click to change)</div>
@@ -613,17 +585,13 @@ const BookingShow = (props) => {
         <div style={styles.sectionTitle}>Change history</div>
         {!history && <div style={styles.empty}>Loading…</div>}
         {history && history.length === 0 && (
-          <div style={styles.empty}>
-            Nothing has changed since this booking was made.
-          </div>
+          <div style={styles.empty}>Nothing has changed since this booking was made.</div>
         )}
         {history &&
           history.map((h, i) => (
             <div key={i} style={styles.historyRow}>
               <span>
-                <span style={styles.historyChange}>
-                  {statusLabel(h.changeType)}
-                </span>
+                <span style={styles.historyChange}>{statusLabel(h.changeType)}</span>
                 <div style={styles.historyDetail}>
                   {h.oldValue || "—"} → {h.newValue || "—"}
                   {h.changedBy ? ` · by ${h.changedBy}` : ""}

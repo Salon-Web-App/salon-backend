@@ -76,9 +76,7 @@ async function getAvailableSlots({ serviceId, date }) {
     const ranges = workingHours?.[weekday] || [];
     if (ranges.length === 0) continue;
 
-    const staffBookings = existingBookings.filter(
-      (b) => b.staffId === staff.id,
-    );
+    const staffBookings = existingBookings.filter((b) => b.staffId === staff.id);
 
     for (const range of ranges) {
       const { start, end } = parseRange(range);

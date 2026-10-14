@@ -1,10 +1,10 @@
 // Admin CRUD for services offered (name, price, duration, description, image).
-const prisma = require('../../lib/prisma');
-const { uploadImageBuffer } = require('../../lib/cloudinary');
+const prisma = require("../../lib/prisma");
+const { uploadImageBuffer } = require("../../lib/cloudinary");
 
 async function list(req, res, next) {
   try {
-    const services = await prisma.service.findMany({ orderBy: { name: 'asc' } });
+    const services = await prisma.service.findMany({ orderBy: { name: "asc" } });
     res.json(services);
   } catch (err) {
     next(err);
@@ -17,7 +17,7 @@ async function create(req, res, next) {
     let imageUrl;
 
     if (req.file) {
-      imageUrl = await uploadImageBuffer(req.file.buffer, 'services');
+      imageUrl = await uploadImageBuffer(req.file.buffer, "services");
     }
 
     const service = await prisma.service.create({
@@ -37,7 +37,7 @@ async function update(req, res, next) {
     let imageUrl;
 
     if (req.file) {
-      imageUrl = await uploadImageBuffer(req.file.buffer, 'services');
+      imageUrl = await uploadImageBuffer(req.file.buffer, "services");
     }
 
     const service = await prisma.service.update({
@@ -47,7 +47,7 @@ async function update(req, res, next) {
         description,
         price,
         durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
-        active: active !== undefined ? active === 'true' || active === true : undefined,
+        active: active !== undefined ? active === "true" || active === true : undefined,
         imageUrl,
       },
     });
@@ -61,7 +61,10 @@ async function update(req, res, next) {
 async function remove(req, res, next) {
   try {
     // Soft delete so past bookings keep their service reference intact.
-    const service = await prisma.service.update({ where: { id: req.params.id }, data: { active: false } });
+    const service = await prisma.service.update({
+      where: { id: req.params.id },
+      data: { active: false },
+    });
     res.json(service);
   } catch (err) {
     next(err);

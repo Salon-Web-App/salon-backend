@@ -72,15 +72,7 @@ function getRangeBounds(rangeKey, now) {
   }
   if (rangeKey === "month") {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthEnd = new Date(
-      now.getFullYear(),
-      now.getMonth() + 1,
-      0,
-      23,
-      59,
-      59,
-      999,
-    );
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
     return { start: monthStart, end: monthEnd };
   }
   // year
@@ -369,8 +361,7 @@ const Dashboard = () => {
   }
 
   function serviceNameFor(b) {
-    if (b.packageId)
-      return packages.find((p) => p.id === b.packageId)?.title || "Package";
+    if (b.packageId) return packages.find((p) => p.id === b.packageId)?.title || "Package";
     return services.find((s) => s.id === b.serviceId)?.name || "Service";
   }
 
@@ -383,45 +374,33 @@ const Dashboard = () => {
 
   const nonCancelled = rangedBookings.filter((b) => b.status !== "cancelled");
   const totalRevenue = nonCancelled.reduce((sum, b) => sum + priceFor(b), 0);
-  const uniqueCustomers = new Set(rangedBookings.map((b) => b.customerPhone))
-    .size;
+  const uniqueCustomers = new Set(rangedBookings.map((b) => b.customerPhone)).size;
 
-  const staffBookedIds = new Set(
-    rangedBookings.filter((b) => b.staffId).map((b) => b.staffId),
-  );
+  const staffBookedIds = new Set(rangedBookings.filter((b) => b.staffId).map((b) => b.staffId));
   const activeStaffCount = staff.filter((s) => s.active).length;
 
-  const completedCount = rangedBookings.filter(
-    (b) => b.status === "completed",
-  ).length;
+  const completedCount = rangedBookings.filter((b) => b.status === "completed").length;
   const upcomingCount = rangedBookings.filter(
     (b) => b.status !== "completed" && b.status !== "cancelled",
   ).length;
-  const cancelledCount = rangedBookings.filter(
-    (b) => b.status === "cancelled",
-  ).length;
+  const cancelledCount = rangedBookings.filter((b) => b.status === "cancelled").length;
 
   // Trend chart buckets: hourly for Today, daily for Week/Month, monthly for Year.
   let chartBuckets = [];
   if (range === "today") {
     chartBuckets = Array.from({ length: 24 }).map((_, hour) => {
-      const bucketBookings = nonCancelled.filter(
-        (b) => new Date(b.startTime).getHours() === hour,
-      );
+      const bucketBookings = nonCancelled.filter((b) => new Date(b.startTime).getHours() === hour);
       return {
         label: hour % 3 === 0 ? `${hour}:00` : "",
         total: bucketBookings.reduce((sum, b) => sum + priceFor(b), 0),
       };
     });
   } else if (range === "week" || range === "month") {
-    const dayCount =
-      Math.round((rangeEnd - rangeStart) / (1000 * 60 * 60 * 24)) + 1;
+    const dayCount = Math.round((rangeEnd - rangeStart) / (1000 * 60 * 60 * 24)) + 1;
     chartBuckets = Array.from({ length: dayCount }).map((_, i) => {
       const day = new Date(rangeStart);
       day.setDate(day.getDate() + i);
-      const bucketBookings = nonCancelled.filter((b) =>
-        isSameDay(new Date(b.startTime), day),
-      );
+      const bucketBookings = nonCancelled.filter((b) => isSameDay(new Date(b.startTime), day));
       return {
         label:
           range === "week"
@@ -432,9 +411,7 @@ const Dashboard = () => {
     });
   } else {
     chartBuckets = Array.from({ length: 12 }).map((_, month) => {
-      const bucketBookings = nonCancelled.filter(
-        (b) => new Date(b.startTime).getMonth() === month,
-      );
+      const bucketBookings = nonCancelled.filter((b) => new Date(b.startTime).getMonth() === month);
       return {
         label: new Date(now.getFullYear(), month, 1).toLocaleDateString([], {
           month: "short",
@@ -484,10 +461,7 @@ const Dashboard = () => {
           }, 0);
           const pct =
             availableMinutes > 0
-              ? Math.min(
-                  100,
-                  Math.round((bookedMinutes / availableMinutes) * 100),
-                )
+              ? Math.min(100, Math.round((bookedMinutes / availableMinutes) * 100))
               : 0;
           utilizationLabel = `${pct}%`;
         } else {
@@ -526,9 +500,7 @@ const Dashboard = () => {
       <div style={styles.headerRow}>
         <div>
           <div style={styles.greeting}>{greeting()}, Admin 👋</div>
-          <div style={styles.subGreeting}>
-            Here's what's happening at your salon.
-          </div>
+          <div style={styles.subGreeting}>Here's what's happening at your salon.</div>
         </div>
         <div style={styles.dateBadge}>{rangeLabel}</div>
       </div>
@@ -652,9 +624,7 @@ const Dashboard = () => {
                 <span style={{ fontWeight: 700 }}>{count}</span>
               </div>
               <div style={styles.serviceBarTrack}>
-                <div
-                  style={styles.serviceBarFill((count / maxServiceCount) * 100)}
-                />
+                <div style={styles.serviceBarFill((count / maxServiceCount) * 100)} />
               </div>
             </div>
           ))}
@@ -663,9 +633,7 @@ const Dashboard = () => {
 
       <div style={styles.panel}>
         <div style={styles.panelTitle}>Staff Performance</div>
-        {staffPerformance.length === 0 && (
-          <div style={styles.empty}>No active staff.</div>
-        )}
+        {staffPerformance.length === 0 && <div style={styles.empty}>No active staff.</div>}
         {staffPerformance.length > 0 && (
           <div style={styles.tableWrap}>
             <table style={styles.table}>
@@ -674,9 +642,7 @@ const Dashboard = () => {
                   <th style={styles.th}>Staff</th>
                   <th style={styles.th}>Bookings</th>
                   <th style={styles.th}>Revenue</th>
-                  <th style={styles.th}>
-                    {range === "today" ? "Utilization" : "Booked Hours"}
-                  </th>
+                  <th style={styles.th}>{range === "today" ? "Utilization" : "Booked Hours"}</th>
                 </tr>
               </thead>
               <tbody>

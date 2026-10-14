@@ -19,9 +19,7 @@ const MOBILE_BREAKPOINT = 768;
 function useIsMobile(breakpoint = MOBILE_BREAKPOINT) {
   const query = `(max-width: ${breakpoint}px)`;
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" && window.matchMedia
-      ? window.matchMedia(query).matches
-      : false,
+    typeof window !== "undefined" && window.matchMedia ? window.matchMedia(query).matches : false,
   );
 
   useEffect(() => {
@@ -308,9 +306,7 @@ const ServiceCardList = (props) => {
 
       const byPackage = {};
       (packageRes?.data?.records || []).forEach((pkg) => {
-        const ids = Array.isArray(pkg.params?.services)
-          ? pkg.params.services
-          : [];
+        const ids = Array.isArray(pkg.params?.services) ? pkg.params.services : [];
         ids.forEach((id) => {
           if (!byPackage[id]) byPackage[id] = [];
           byPackage[id].push(pkg.params?.title || "Untitled package");
@@ -367,8 +363,7 @@ const ServiceCardList = (props) => {
                 key={p.id}
                 style={styles.card(isMobile)}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow =
-                    "0 2px 8px rgba(0,0,0,0.06)";
+                  e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)";
                   e.currentTarget.style.borderColor = "#c9cedb";
                 }}
                 onMouseLeave={(e) => {
@@ -376,21 +371,14 @@ const ServiceCardList = (props) => {
                   e.currentTarget.style.borderColor = "#e5e7eb";
                 }}
               >
-                <div
-                  style={styles.mainClickable(isMobile)}
-                  onClick={() => goToShow(p.id)}
-                >
+                <div style={styles.mainClickable(isMobile)} onClick={() => goToShow(p.id)}>
                   <div style={styles.iconColumn}>
                     {p.imageUrl && !brokenImageIds.has(p.id) ? (
                       <img
                         src={p.imageUrl}
                         alt={p.name}
                         style={styles.avatar}
-                        onError={() =>
-                          setBrokenImageIds(
-                            (prev) => new Set(prev).add(p.id),
-                          )
-                        }
+                        onError={() => setBrokenImageIds((prev) => new Set(prev).add(p.id))}
                       />
                     ) : (
                       <div style={styles.avatarPlaceholder}>
@@ -398,9 +386,7 @@ const ServiceCardList = (props) => {
                       </div>
                     )}
                     <span style={styles.iconChip}>{formatPrice(p.price)}</span>
-                    <span style={styles.iconChip}>
-                      {formatDuration(p.durationMinutes)}
-                    </span>
+                    <span style={styles.iconChip}>{formatDuration(p.durationMinutes)}</span>
                   </div>
                   <div style={styles.body}>
                     <div style={styles.topRow}>
@@ -409,19 +395,13 @@ const ServiceCardList = (props) => {
                         {p.active ? "Active" : "Inactive"}
                       </span>
                     </div>
-                    {p.category && (
-                      <div style={styles.category}>{p.category}</div>
-                    )}
-                    {p.description && (
-                      <div style={styles.description}>{p.description}</div>
-                    )}
+                    {p.category && <div style={styles.category}>{p.category}</div>}
+                    {p.description && <div style={styles.description}>{p.description}</div>}
 
                     <div style={styles.sectionLabel}>Included in packages</div>
                     <div>
                       {packageTitles.length === 0 ? (
-                        <span style={styles.panelEmpty}>
-                          Not part of any package
-                        </span>
+                        <span style={styles.panelEmpty}>Not part of any package</span>
                       ) : (
                         packageTitles.map((title, i) => (
                           <span key={`${title}-${i}`} style={styles.chip}>
@@ -436,12 +416,8 @@ const ServiceCardList = (props) => {
                 <div
                   style={styles.panel(isMobile)}
                   onClick={(e) => goToStaffForService(e, p.id)}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "#f0f1f5")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "#fafbfc")
-                  }
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f1f5")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "#fafbfc")}
                   title="View staff offering this service"
                 >
                   <div style={styles.panelHeader}>
@@ -454,24 +430,16 @@ const ServiceCardList = (props) => {
                       {visibleStaff.map((s) => (
                         <div key={s.id} style={styles.staffRow}>
                           {s.photoUrl ? (
-                            <img
-                              src={s.photoUrl}
-                              alt={s.name}
-                              style={styles.staffAvatar}
-                            />
+                            <img src={s.photoUrl} alt={s.name} style={styles.staffAvatar} />
                           ) : (
                             <div style={styles.staffAvatarPlaceholder}>
                               {(s.name || "?").slice(0, 1).toUpperCase()}
                             </div>
                           )}
-                          <span style={styles.staffName}>
-                            {s.name || "Unnamed"}
-                          </span>
+                          <span style={styles.staffName}>{s.name || "Unnamed"}</span>
                         </div>
                       ))}
-                      {extraCount > 0 && (
-                        <div style={styles.moreLink}>+{extraCount} more</div>
-                      )}
+                      {extraCount > 0 && <div style={styles.moreLink}>+{extraCount} more</div>}
                       <div style={styles.moreLink}>View all staff →</div>
                     </>
                   )}

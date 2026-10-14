@@ -23,8 +23,7 @@ const { cookieSecure } = require("../config");
 // Same constant as src/controllers/admin/auth.controller.js — used only as
 // a bcrypt.compare target for the "user not found" login path, never to
 // actually authenticate anyone.
-const DUMMY_ADMIN_HASH =
-  "$2b$10$CwTycUXWue0Thq9StjUM0uJ8Q/6yGa5eXeI5EofrOakYFdhaVwYbW";
+const DUMMY_ADMIN_HASH = "$2b$10$CwTycUXWue0Thq9StjUM0uJ8Q/6yGa5eXeI5EofrOakYFdhaVwYbW";
 
 async function bookingEditBefore(request) {
   if (request.method !== "post") return request;
@@ -136,27 +135,15 @@ function makeMediaUploadHook(fieldName, folder, resourceType = "auto") {
   return async function uploadMediaIfNeeded(request) {
     const value = request.payload?.[fieldName];
     if (typeof value === "string" && value.startsWith("data:")) {
-      const match = value.match(
-        /^data:([a-zA-Z0-9]+\/[a-zA-Z0-9.+-]+);base64,(.+)$/,
-      );
+      const match = value.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
       if (!match) throw new Error("That file could not be read.");
       const buffer = Buffer.from(match[2], "base64");
-      request.payload[fieldName] = await uploadImageBuffer(
-        buffer,
-        folder,
-        resourceType,
-      );
+      request.payload[fieldName] = await uploadImageBuffer(buffer, folder, resourceType);
     }
     return request;
   };
 }
-async function logAndNotify(
-  bookingId,
-  changeType,
-  oldValue,
-  newValue,
-  notifyType,
-) {
+async function logAndNotify(bookingId, changeType, oldValue, newValue, notifyType) {
   await prisma.bookingHistory.create({
     data: { bookingId, changeType, oldValue, newValue, changedBy: "admin" },
   });
@@ -238,9 +225,7 @@ async function attachStaffServices(records) {
     where: { id: { in: staffIds } },
     select: { id: true, services: { select: { id: true } } },
   });
-  const byStaffId = new Map(
-    rows.map((s) => [s.id, s.services.map((svc) => svc.id)]),
-  );
+  const byStaffId = new Map(rows.map((s) => [s.id, s.services.map((svc) => svc.id)]));
 
   records.forEach((r) => {
     if (r.params) {
@@ -330,9 +315,7 @@ async function attachPackageServices(records) {
     where: { id: { in: packageIds } },
     select: { id: true, services: { select: { id: true } } },
   });
-  const byPackageId = new Map(
-    rows.map((p) => [p.id, p.services.map((svc) => svc.id)]),
-  );
+  const byPackageId = new Map(rows.map((p) => [p.id, p.services.map((svc) => svc.id)]));
 
   records.forEach((r) => {
     if (r.params) {
@@ -449,8 +432,7 @@ async function mountAdminPanel(app) {
 
   const { default: AdminJS, ComponentLoader } = await import("adminjs");
   const { default: AdminJSExpress } = await import("@adminjs/express");
-  const { Database, Resource, getModelByName } =
-    await import("@adminjs/prisma");
+  const { Database, Resource, getModelByName } = await import("@adminjs/prisma");
 
   AdminJS.registerAdapter({ Database, Resource });
 
@@ -468,14 +450,8 @@ async function mountAdminPanel(app) {
       "ServicesEdit",
       require.resolve("./components/ServiceEdit.jsx"),
     ),
-    StaffShow: componentLoader.add(
-      "StaffShow",
-      require.resolve("./components/StaffShow.jsx"),
-    ),
-    StaffEdit: componentLoader.add(
-      "StaffEdit",
-      require.resolve("./components/StaffEdit.jsx"),
-    ),
+    StaffShow: componentLoader.add("StaffShow", require.resolve("./components/StaffShow.jsx")),
+    StaffEdit: componentLoader.add("StaffEdit", require.resolve("./components/StaffEdit.jsx")),
     StaffCardList: componentLoader.add(
       "StaffCardList",
       require.resolve("./components/StaffCardList.jsx"),
@@ -529,10 +505,7 @@ async function mountAdminPanel(app) {
       "ReviewCardList",
       require.resolve("./components/ReviewCardList.jsx"),
     ),
-    ReviewShow: componentLoader.add(
-      "ReviewShow",
-      require.resolve("./components/ReviewShow.jsx"),
-    ),
+    ReviewShow: componentLoader.add("ReviewShow", require.resolve("./components/ReviewShow.jsx")),
     TransformationCardList: componentLoader.add(
       "TransformationCardList",
       require.resolve("./components/TransformationCardList.jsx"),
@@ -545,10 +518,7 @@ async function mountAdminPanel(app) {
       "TransformationEdit",
       require.resolve("./components/TransformationEdit.jsx"),
     ),
-    Dashboard: componentLoader.add(
-      "Dashboard",
-      require.resolve("./components/Dashboard.jsx"),
-    ),
+    Dashboard: componentLoader.add("Dashboard", require.resolve("./components/Dashboard.jsx")),
   };
 
   const admin = new AdminJS({
@@ -732,21 +702,14 @@ async function mountAdminPanel(app) {
               // keeps working. Without this, AdminJS renders its own
               // "Delete" toolbar button on top of our custom one.
               isVisible: false,
-              guard:
-                "This will hide the booking from normal views but keep its history. Continue?",
+              guard: "This will hide the booking from normal views but keep its history. Continue?",
               handler: async (request, response, context) => {
                 const { record, currentAdmin } = context;
                 const existing = await prisma.booking.findUnique({
                   where: { id: record.id() },
                 });
                 assertBookingEditable(existing);
-                await logAndNotify(
-                  record.id(),
-                  "soft_deleted",
-                  existing.status,
-                  "deleted",
-                  null,
-                );
+                await logAndNotify(record.id(), "soft_deleted", existing.status, "deleted", null);
                 await prisma.booking.update({
                   where: { id: record.id() },
                   data: { deletedAt: new Date() },
@@ -804,8 +767,7 @@ async function mountAdminPanel(app) {
                 assertBookingEditable(existing);
                 const newStart = new Date(startTime);
                 const newEnd = new Date(
-                  newStart.getTime() +
-                    existing.service.durationMinutes * 60 * 1000,
+                  newStart.getTime() + existing.service.durationMinutes * 60 * 1000,
                 );
                 await prisma.booking.update({
                   where: { id: record.id() },
@@ -881,18 +843,12 @@ async function mountAdminPanel(app) {
               component: Components.PackageShow,
             },
             new: {
-              before: [
-                makePhotoUploadHook("imageUrl", "packages"),
-                packageEditBefore,
-              ],
+              before: [makePhotoUploadHook("imageUrl", "packages"), packageEditBefore],
               after: [packageEditAfter, packageRecordAfter],
               component: Components.PackageEdit,
             },
             edit: {
-              before: [
-                makePhotoUploadHook("imageUrl", "packages"),
-                packageEditBefore,
-              ],
+              before: [makePhotoUploadHook("imageUrl", "packages"), packageEditBefore],
               after: [packageEditAfter, packageRecordAfter],
               component: Components.PackageEdit,
             },
@@ -997,10 +953,7 @@ async function mountAdminPanel(app) {
     // a fixed dummy hash in that case — so a nonexistent email doesn't
     // resolve faster than a real one and leak which admin emails exist via
     // response timing.
-    const valid = await bcrypt.compare(
-      password,
-      user?.passwordHash || DUMMY_ADMIN_HASH,
-    );
+    const valid = await bcrypt.compare(password, user?.passwordHash || DUMMY_ADMIN_HASH);
     return user && valid ? { email: user.email, id: user.id } : null;
   };
 

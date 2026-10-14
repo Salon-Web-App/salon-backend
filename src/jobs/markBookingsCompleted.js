@@ -35,10 +35,7 @@ async function markBookingsCompleted() {
       );
       completed += 1;
     } catch (err) {
-      logger.error(
-        { err, applicationId: booking.applicationId },
-        "failed to complete booking",
-      );
+      logger.error({ err, applicationId: booking.applicationId }, "failed to complete booking");
     }
   }
 

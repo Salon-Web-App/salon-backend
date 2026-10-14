@@ -7,7 +7,7 @@
 //
 // Safe methods (GET/HEAD/OPTIONS) are never state-changing, so they pass
 // through untouched — this only guards POST/PUT/PATCH/DELETE.
-const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 function originHost(value) {
   if (!value) return null;
@@ -27,7 +27,7 @@ function csrfOriginCheck(req, res, next) {
   const sourceHost = originHost(req.headers.origin) || originHost(req.headers.referer);
 
   if (!sourceHost || sourceHost !== expectedHost) {
-    return res.status(403).json({ error: 'Request origin could not be verified.' });
+    return res.status(403).json({ error: "Request origin could not be verified." });
   }
 
   return next();

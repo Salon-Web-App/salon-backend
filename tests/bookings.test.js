@@ -38,9 +38,9 @@ describe("POST /api/bookings", () => {
     expect(row.endTime.getTime() - row.startTime.getTime()).toBe(60 * 60 * 1000);
 
     const jobs = await notificationsQueue.getJobs(["waiting", "delayed"]);
-    expect(
-      jobs.some((j) => j.name === "booking.created" && j.data.bookingId === row.id),
-    ).toBe(true);
+    expect(jobs.some((j) => j.name === "booking.created" && j.data.bookingId === row.id)).toBe(
+      true,
+    );
   });
 
   test("missing / invalid fields -> 400", async () => {

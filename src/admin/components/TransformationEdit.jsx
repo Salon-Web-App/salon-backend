@@ -285,10 +285,7 @@ const TransformationEdit = (props) => {
           checked={fields.active}
           onChange={() => setField("active", !fields.active)}
         />
-        <label
-          htmlFor="transformation-active"
-          style={{ fontSize: 13, color: "#555" }}
-        >
+        <label htmlFor="transformation-active" style={{ fontSize: 13, color: "#555" }}>
           Active
         </label>
       </div>
@@ -325,12 +322,7 @@ const TransformationEdit = (props) => {
         >
           {saving ? "Saving…" : "Save Changes"}
         </button>
-        <button
-          type="button"
-          style={styles.cancelBtn}
-          disabled={saving}
-          onClick={handleCancel}
-        >
+        <button type="button" style={styles.cancelBtn} disabled={saving} onClick={handleCancel}>
           Cancel
         </button>
       </div>

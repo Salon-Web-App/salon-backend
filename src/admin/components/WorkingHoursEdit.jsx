@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  Box,
-  CheckBox,
-  Label,
-  Input,
-  FormGroup,
-  Text,
-} from "@adminjs/design-system";
+import { Box, CheckBox, Label, Input, FormGroup, Text } from "@adminjs/design-system";
 
 const DAYS = [
   { key: "sun", label: "Sunday" },
@@ -106,20 +99,12 @@ const WorkingHoursEdit = (props) => {
       <Label>{property.label}</Label>
       <Box>
         {DAYS.map((day) => (
-          <Box
-            key={day.key}
-            display="flex"
-            alignItems="center"
-            gap="12px"
-            mb="8px"
-          >
+          <Box key={day.key} display="flex" alignItems="center" gap="12px" mb="8px">
             <Box width="150px" display="flex" alignItems="center">
               <CheckBox
                 id={`wh-${day.key}`}
                 checked={schedule[day.key].enabled}
-                onChange={() =>
-                  updateDay(day.key, "enabled", !schedule[day.key].enabled)
-                }
+                onChange={() => updateDay(day.key, "enabled", !schedule[day.key].enabled)}
               />
               <Label htmlFor={`wh-${day.key}`} inline ml="8px">
                 {day.label}

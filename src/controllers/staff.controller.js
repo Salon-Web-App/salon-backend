@@ -19,9 +19,7 @@ async function getAvailability(req, res, next) {
   try {
     const { staffId, serviceId, date } = req.query;
     if (!staffId || !serviceId || !date) {
-      return res
-        .status(400)
-        .json({ error: "staffId, serviceId and date are required" });
+      return res.status(400).json({ error: "staffId, serviceId and date are required" });
     }
     const slots = await getAvailableSlots({ staffId, serviceId, date });
     res.json(slots);

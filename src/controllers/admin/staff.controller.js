@@ -1,11 +1,14 @@
 // Admin CRUD for staff members: profile info, workingHours (used by the
 // availability engine), and photo (uploaded to Cloudinary via multer).
-const prisma = require('../../lib/prisma');
-const { uploadImageBuffer } = require('../../lib/cloudinary');
+const prisma = require("../../lib/prisma");
+const { uploadImageBuffer } = require("../../lib/cloudinary");
 
 async function list(req, res, next) {
   try {
-    const staff = await prisma.staff.findMany({ include: { services: true }, orderBy: { name: 'asc' } });
+    const staff = await prisma.staff.findMany({
+      include: { services: true },
+      orderBy: { name: "asc" },
+    });
     res.json(staff);
   } catch (err) {
     next(err);
@@ -18,7 +21,7 @@ async function create(req, res, next) {
     let photoUrl;
 
     if (req.file) {
-      photoUrl = await uploadImageBuffer(req.file.buffer, 'staff');
+      photoUrl = await uploadImageBuffer(req.file.buffer, "staff");
     }
 
     const staff = await prisma.staff.create({
@@ -27,7 +30,9 @@ async function create(req, res, next) {
         bio,
         photoUrl,
         workingHours: workingHours ? JSON.parse(workingHours) : {},
-        services: serviceIds ? { connect: JSON.parse(serviceIds).map((id) => ({ id })) } : undefined,
+        services: serviceIds
+          ? { connect: JSON.parse(serviceIds).map((id) => ({ id })) }
+          : undefined,
       },
     });
 
@@ -44,7 +49,7 @@ async function update(req, res, next) {
     let photoUrl;
 
     if (req.file) {
-      photoUrl = await uploadImageBuffer(req.file.buffer, 'staff');
+      photoUrl = await uploadImageBuffer(req.file.buffer, "staff");
     }
 
     const staff = await prisma.staff.update({
@@ -52,10 +57,12 @@ async function update(req, res, next) {
       data: {
         name,
         bio,
-        active: active !== undefined ? active === 'true' || active === true : undefined,
+        active: active !== undefined ? active === "true" || active === true : undefined,
         photoUrl,
         workingHours: workingHours ? JSON.parse(workingHours) : undefined,
-        services: serviceIds ? { set: JSON.parse(serviceIds).map((sid) => ({ id: sid })) } : undefined,
+        services: serviceIds
+          ? { set: JSON.parse(serviceIds).map((sid) => ({ id: sid })) }
+          : undefined,
       },
     });
 
@@ -69,7 +76,10 @@ async function remove(req, res, next) {
   try {
     // Soft delete preferred over hard delete so past bookings keep their
     // staff reference intact.
-    const staff = await prisma.staff.update({ where: { id: req.params.id }, data: { active: false } });
+    const staff = await prisma.staff.update({
+      where: { id: req.params.id },
+      data: { active: false },
+    });
     res.json(staff);
   } catch (err) {
     next(err);

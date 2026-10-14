@@ -58,9 +58,7 @@ async function processNotificationJob(job) {
   const attempts = [
     ["sms", () => sendSms(booking.customerPhone, sms)],
     ["email", () => sendEmail(booking.customerEmail, subject, html)],
-  ].filter(([channel]) =>
-    channel === "sms" ? booking.customerPhone : booking.customerEmail,
-  );
+  ].filter(([channel]) => (channel === "sms" ? booking.customerPhone : booking.customerEmail));
 
   const results = await Promise.allSettled(attempts.map(([, send]) => send()));
 

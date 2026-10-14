@@ -21,9 +21,7 @@ function useIsMobile(breakpoint = MOBILE_BREAKPOINT) {
   const query = `(max-width: ${breakpoint}px)`;
 
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" && window.matchMedia
-      ? window.matchMedia(query).matches
-      : false,
+    typeof window !== "undefined" && window.matchMedia ? window.matchMedia(query).matches : false,
   );
 
   useEffect(() => {
@@ -89,15 +87,8 @@ function readServiceIds(record, propertyName) {
   const flatPrefix = `${propertyName}.`;
 
   return Object.keys(params)
-    .filter(
-      (key) =>
-        key.startsWith(flatPrefix) &&
-        /^\d+$/.test(key.slice(flatPrefix.length)),
-    )
-    .sort(
-      (a, b) =>
-        Number(a.slice(flatPrefix.length)) - Number(b.slice(flatPrefix.length)),
-    )
+    .filter((key) => key.startsWith(flatPrefix) && /^\d+$/.test(key.slice(flatPrefix.length)))
+    .sort((a, b) => Number(a.slice(flatPrefix.length)) - Number(b.slice(flatPrefix.length)))
     .map((key) => params[key])
     .filter((v) => v !== undefined && v !== null && v !== "");
 }
@@ -742,9 +733,7 @@ const StaffCardList = (props) => {
           (service) => service.value === booking.serviceId,
         )?.label;
 
-        const packageTitle = packageList.find(
-          (pkg) => pkg.value === booking.packageId,
-        )?.label;
+        const packageTitle = packageList.find((pkg) => pkg.value === booking.packageId)?.label;
 
         grouped[staffId].push({
           ...booking,
@@ -759,8 +748,7 @@ const StaffCardList = (props) => {
 
       Object.keys(grouped).forEach((staffId) => {
         grouped[staffId].sort(
-          (a, b) =>
-            new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+          (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
         );
       });
 
@@ -852,8 +840,7 @@ const StaffCardList = (props) => {
     ? services?.find((s) => s.value === serviceFilter)?.label || "this service"
     : null;
 
-  const hasActiveFilter =
-    !!serviceFilter || statusFilter !== "all" || experienceFilter !== "all";
+  const hasActiveFilter = !!serviceFilter || statusFilter !== "all" || experienceFilter !== "all";
 
   // ----------------------------------------------------------
   // Render
@@ -919,11 +906,7 @@ const StaffCardList = (props) => {
         </div>
 
         {hasActiveFilter && (
-          <button
-            type="button"
-            style={styles.clearFilter}
-            onClick={clearFilters}
-          >
+          <button type="button" style={styles.clearFilter} onClick={clearFilters}>
             Clear filter
           </button>
         )}
@@ -931,293 +914,265 @@ const StaffCardList = (props) => {
 
       {filteredRecords.length === 0 ? (
         <div style={styles.loading}>
-          {hasActiveFilter
-            ? "No staff members match these filters."
-            : "No staff members yet."}
+          {hasActiveFilter ? "No staff members match these filters." : "No staff members yet."}
         </div>
       ) : (
-      <div style={styles.list}>
-      {filteredRecords.map((r) => {
-        const params = r.params || {};
+        <div style={styles.list}>
+          {filteredRecords.map((r) => {
+            const params = r.params || {};
 
-        const serviceIds = readServiceIds(r, "services");
+            const serviceIds = readServiceIds(r, "services");
 
-        const serviceNames = serviceIds
-          .map((id) => services?.find((s) => s.value === id)?.label)
-          .filter(Boolean);
+            const serviceNames = serviceIds
+              .map((id) => services?.find((s) => s.value === id)?.label)
+              .filter(Boolean);
 
-        const schedule = readWorkingHours(r);
+            const schedule = readWorkingHours(r);
 
-        // ------------------------------------------------------
-        // Get all future bookings for this staff member
-        // ------------------------------------------------------
+            // ------------------------------------------------------
+            // Get all future bookings for this staff member
+            // ------------------------------------------------------
 
-        const staffBookings = (bookingsByStaff[params.id] || []).filter(
-          (booking) => isFutureBooking(booking.startTime),
-        );
+            const staffBookings = (bookingsByStaff[params.id] || []).filter((booking) =>
+              isFutureBooking(booking.startTime),
+            );
 
-        // ------------------------------------------------------
-        // Today's bookings
-        // ------------------------------------------------------
+            // ------------------------------------------------------
+            // Today's bookings
+            // ------------------------------------------------------
 
-        const todaysBookings = staffBookings.filter((booking) =>
-          isToday(booking.startTime),
-        );
+            const todaysBookings = staffBookings.filter((booking) => isToday(booking.startTime));
 
-        // ------------------------------------------------------
-        // Decide what to display
-        //
-        // If there are bookings today:
-        //     show today's bookings
-        //
-        // Otherwise:
-        //     show the next upcoming booking
-        // ------------------------------------------------------
+            // ------------------------------------------------------
+            // Decide what to display
+            //
+            // If there are bookings today:
+            //     show today's bookings
+            //
+            // Otherwise:
+            //     show the next upcoming booking
+            // ------------------------------------------------------
 
-        const showingToday = todaysBookings.length > 0;
+            const showingToday = todaysBookings.length > 0;
 
-        const displayedBookings = showingToday
-          ? todaysBookings
-          : staffBookings.length > 0
-            ? [staffBookings[0]]
-            : [];
+            const displayedBookings = showingToday
+              ? todaysBookings
+              : staffBookings.length > 0
+                ? [staffBookings[0]]
+                : [];
 
-        const visibleAppointments = displayedBookings.slice(0, 4);
+            const visibleAppointments = displayedBookings.slice(0, 4);
 
-        const extraCount = showingToday
-          ? todaysBookings.length - visibleAppointments.length
-          : 0;
+            const extraCount = showingToday
+              ? todaysBookings.length - visibleAppointments.length
+              : 0;
 
-        const nextBooking =
-          !showingToday && displayedBookings.length > 0
-            ? displayedBookings[0]
-            : null;
+            const nextBooking =
+              !showingToday && displayedBookings.length > 0 ? displayedBookings[0] : null;
 
-        const initials = (params.name || "?")
-          .split(" ")
-          .map((p) => p[0])
-          .slice(0, 2)
-          .join("")
-          .toUpperCase();
+            const initials = (params.name || "?")
+              .split(" ")
+              .map((p) => p[0])
+              .slice(0, 2)
+              .join("")
+              .toUpperCase();
 
-        return (
-          <div
-            key={params.id}
-            style={styles.card(isMobile)}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)";
+            return (
+              <div
+                key={params.id}
+                style={styles.card(isMobile)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)";
 
-              e.currentTarget.style.borderColor = "#c9cedb";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = "none";
+                  e.currentTarget.style.borderColor = "#c9cedb";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = "none";
 
-              e.currentTarget.style.borderColor = "#e5e7eb";
-            }}
-          >
-            {/* ------------------------------------------------
+                  e.currentTarget.style.borderColor = "#e5e7eb";
+                }}
+              >
+                {/* ------------------------------------------------
                 MAIN STAFF INFORMATION
             ------------------------------------------------ */}
 
-            <div
-              style={styles.mainClickable(isMobile)}
-              onClick={() => goToStaffShow(params.id)}
-            >
-              {params.photoUrl ? (
-                <img
-                  src={params.photoUrl}
-                  alt={params.name}
-                  style={styles.photo}
-                />
-              ) : (
-                <div style={styles.photoPlaceholder}>{initials}</div>
-              )}
-
-              <div style={styles.body}>
-                <div style={styles.topRow}>
-                  <span style={styles.name}>
-                    {params.name || "Unnamed staff"}
-                  </span>
-
-                  <span style={styles.statusBadge(params.active)}>
-                    {params.active ? "Active" : "Inactive"}
-                  </span>
-
-                  {params.experience && (
-                    <span style={styles.experienceBadge}>
-                      {params.experience} years of expertise
-                    </span>
+                <div
+                  style={styles.mainClickable(isMobile)}
+                  onClick={() => goToStaffShow(params.id)}
+                >
+                  {params.photoUrl ? (
+                    <img src={params.photoUrl} alt={params.name} style={styles.photo} />
+                  ) : (
+                    <div style={styles.photoPlaceholder}>{initials}</div>
                   )}
-                </div>
 
-                {params.specialty && (
-                  <div style={styles.specialty}>{params.specialty}</div>
-                )}
+                  <div style={styles.body}>
+                    <div style={styles.topRow}>
+                      <span style={styles.name}>{params.name || "Unnamed staff"}</span>
 
-                {params.bio && (
-                  <div style={styles.bio}>
-                    {params.bio.length > 160
-                      ? `${params.bio.slice(0, 160)}…`
-                      : params.bio}
-                  </div>
-                )}
+                      <span style={styles.statusBadge(params.active)}>
+                        {params.active ? "Active" : "Inactive"}
+                      </span>
 
-                {/* --------------------------------------------
+                      {params.experience && (
+                        <span style={styles.experienceBadge}>
+                          {params.experience} years of expertise
+                        </span>
+                      )}
+                    </div>
+
+                    {params.specialty && <div style={styles.specialty}>{params.specialty}</div>}
+
+                    {params.bio && (
+                      <div style={styles.bio}>
+                        {params.bio.length > 160 ? `${params.bio.slice(0, 160)}…` : params.bio}
+                      </div>
+                    )}
+
+                    {/* --------------------------------------------
                     WEEKLY SCHEDULE
                 -------------------------------------------- */}
 
-                <div style={styles.sectionLabel}>Weekly schedule</div>
+                    <div style={styles.sectionLabel}>Weekly schedule</div>
 
-                <div style={styles.scheduleRow}>
-                  {DAYS.map((day) => {
-                    const range = schedule?.[day.key]?.[0];
+                    <div style={styles.scheduleRow}>
+                      {DAYS.map((day) => {
+                        const range = schedule?.[day.key]?.[0];
 
-                    if (range) {
-                      const [start, end] = range.split("-");
+                        if (range) {
+                          const [start, end] = range.split("-");
 
-                      return (
-                        <span
-                          key={day.key}
-                          style={styles.dayPillOn}
-                          title={`${to12Hour(start)} – ${to12Hour(end)}`}
-                        >
-                          {day.label}
-                        </span>
-                      );
-                    }
+                          return (
+                            <span
+                              key={day.key}
+                              style={styles.dayPillOn}
+                              title={`${to12Hour(start)} – ${to12Hour(end)}`}
+                            >
+                              {day.label}
+                            </span>
+                          );
+                        }
 
-                    return (
-                      <span key={day.key} style={styles.dayPillOff}>
-                        {day.label}
-                      </span>
-                    );
-                  })}
-                </div>
+                        return (
+                          <span key={day.key} style={styles.dayPillOff}>
+                            {day.label}
+                          </span>
+                        );
+                      })}
+                    </div>
 
-                {/* --------------------------------------------
+                    {/* --------------------------------------------
                     SERVICES
                 -------------------------------------------- */}
 
-                <div style={styles.sectionLabel}>Services</div>
+                    <div style={styles.sectionLabel}>Services</div>
 
-                <div>
-                  {serviceIds.length === 0 && (
-                    <span style={styles.empty}>No services assigned</span>
-                  )}
+                    <div>
+                      {serviceIds.length === 0 && (
+                        <span style={styles.empty}>No services assigned</span>
+                      )}
 
-                  {serviceIds.length > 0 && !services && (
-                    <span style={styles.empty}>Loading services…</span>
-                  )}
+                      {serviceIds.length > 0 && !services && (
+                        <span style={styles.empty}>Loading services…</span>
+                      )}
 
-                  {serviceIds.length > 0 &&
-                    services &&
-                    (serviceNames.length > 0 ? (
-                      serviceNames.map((name) => (
-                        <span key={name} style={styles.chip}>
-                          {name}
-                        </span>
-                      ))
-                    ) : (
-                      <span style={styles.empty}>
-                        {serviceIds.length} service(s) assigned
-                      </span>
-                    ))}
+                      {serviceIds.length > 0 &&
+                        services &&
+                        (serviceNames.length > 0 ? (
+                          serviceNames.map((name) => (
+                            <span key={name} style={styles.chip}>
+                              {name}
+                            </span>
+                          ))
+                        ) : (
+                          <span style={styles.empty}>{serviceIds.length} service(s) assigned</span>
+                        ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {/* ------------------------------------------------
+                {/* ------------------------------------------------
                 RIGHT SIDE BOOKING PANEL
             ------------------------------------------------ */}
 
-            <div
-              style={styles.schedulePanel(isMobile)}
-              onClick={(e) => goToStaffBookings(e, params.id)}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "#f0f1f5")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "#fafbfc")
-              }
-              title={
-                showingToday
-                  ? "View all bookings for this staff member"
-                  : "View upcoming bookings for this staff member"
-              }
-            >
-              {/* --------------------------------------------
+                <div
+                  style={styles.schedulePanel(isMobile)}
+                  onClick={(e) => goToStaffBookings(e, params.id)}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f1f5")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "#fafbfc")}
+                  title={
+                    showingToday
+                      ? "View all bookings for this staff member"
+                      : "View upcoming bookings for this staff member"
+                  }
+                >
+                  {/* --------------------------------------------
                   HEADER
               -------------------------------------------- */}
 
-              <div style={styles.scheduleHeader}>
-                <span>
-                  {showingToday ? "Today's Schedule" : "Next Booking"}
-                </span>
+                  <div style={styles.scheduleHeader}>
+                    <span>{showingToday ? "Today's Schedule" : "Next Booking"}</span>
 
-                {showingToday && todaysBookings.length > 0 && (
-                  <span style={styles.scheduleCount}>
-                    {todaysBookings.length}
-                  </span>
-                )}
-              </div>
+                    {showingToday && todaysBookings.length > 0 && (
+                      <span style={styles.scheduleCount}>{todaysBookings.length}</span>
+                    )}
+                  </div>
 
-              {/* --------------------------------------------
+                  {/* --------------------------------------------
                   NEXT BOOKING DATE
               -------------------------------------------- */}
 
-              {!showingToday && nextBooking && (
-                <div style={styles.nextBookingDate}>
-                  {formatBookingDate(nextBooking.startTime)}
-                </div>
-              )}
+                  {!showingToday && nextBooking && (
+                    <div style={styles.nextBookingDate}>
+                      {formatBookingDate(nextBooking.startTime)}
+                    </div>
+                  )}
 
-              {/* --------------------------------------------
+                  {/* --------------------------------------------
                   NO BOOKINGS
               -------------------------------------------- */}
 
-              {displayedBookings.length === 0 && (
-                <div style={styles.noAppointments}>No upcoming bookings</div>
-              )}
+                  {displayedBookings.length === 0 && (
+                    <div style={styles.noAppointments}>No upcoming bookings</div>
+                  )}
 
-              {/* --------------------------------------------
+                  {/* --------------------------------------------
                   BOOKINGS
               -------------------------------------------- */}
 
-              {visibleAppointments.map((booking, i) => (
-                <div
-                  key={booking.id || `${booking.startTime}-${i}`}
-                  style={styles.appointmentRow(isMobile)}
-                >
-                  <span style={styles.appointmentTime}>
-                    {formatBookingTime(booking.startTime)}
-                  </span>
+                  {visibleAppointments.map((booking, i) => (
+                    <div
+                      key={booking.id || `${booking.startTime}-${i}`}
+                      style={styles.appointmentRow(isMobile)}
+                    >
+                      <span style={styles.appointmentTime}>
+                        {formatBookingTime(booking.startTime)}
+                      </span>
 
-                  <span style={styles.appointmentService(isMobile)}>
-                    {bookingLabel(booking)}
-                  </span>
-                </div>
-              ))}
+                      <span style={styles.appointmentService(isMobile)}>
+                        {bookingLabel(booking)}
+                      </span>
+                    </div>
+                  ))}
 
-              {/* --------------------------------------------
+                  {/* --------------------------------------------
                   MORE TODAY
               -------------------------------------------- */}
 
-              {extraCount > 0 && (
-                <div style={styles.moreLink}>+{extraCount} more</div>
-              )}
+                  {extraCount > 0 && <div style={styles.moreLink}>+{extraCount} more</div>}
 
-              {/* --------------------------------------------
+                  {/* --------------------------------------------
                   FOOTER LINK
               -------------------------------------------- */}
 
-              {displayedBookings.length > 0 && (
-                <div style={styles.moreLink}>View all bookings →</div>
-              )}
-            </div>
-          </div>
-        );
-      })}
-      </div>
+                  {displayedBookings.length > 0 && (
+                    <div style={styles.moreLink}>View all bookings →</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );

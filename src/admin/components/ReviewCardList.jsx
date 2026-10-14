@@ -112,7 +112,13 @@ const styles = {
     fontWeight: 700,
     lineHeight: 1,
   },
-  orderValue: { fontSize: 13, fontWeight: 600, color: "#1a1d24", minWidth: 20, textAlign: "center" },
+  orderValue: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#1a1d24",
+    minWidth: 20,
+    textAlign: "center",
+  },
   panelLabel: {
     fontSize: 10,
     fontWeight: 700,
@@ -226,8 +232,7 @@ const ReviewCardList = (props) => {
                 key={p.id}
                 style={{ ...styles.card, ...(visible ? {} : styles.cardHidden) }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow =
-                    "0 2px 8px rgba(0,0,0,0.06)";
+                  e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)";
                   e.currentTarget.style.borderColor = "#c9cedb";
                 }}
                 onMouseLeave={(e) => {
@@ -246,9 +251,7 @@ const ReviewCardList = (props) => {
                       {bookings[p.bookingId] || "Unknown customer"}
                     </span>
                     <Stars rating={p.rating} />
-                    <span style={styles.visBadge(visible)}>
-                      {visible ? "Visible" : "Hidden"}
-                    </span>
+                    <span style={styles.visBadge(visible)}>{visible ? "Visible" : "Hidden"}</span>
                   </div>
                   <div style={p.comment ? styles.comment : styles.empty}>
                     {p.comment || "No comment left."}
@@ -280,16 +283,12 @@ const ReviewCardList = (props) => {
                     </button>
                   </div>
 
-                  <div style={{ ...styles.panelLabel, marginTop: 6 }}>
-                    Visibility
-                  </div>
+                  <div style={{ ...styles.panelLabel, marginTop: 6 }}>Visibility</div>
                   <button
                     type="button"
                     style={styles.toggleBtn(visible)}
                     disabled={busy}
-                    onClick={() =>
-                      runAction(p.id, "toggleVisibility", { approved: !visible })
-                    }
+                    onClick={() => runAction(p.id, "toggleVisibility", { approved: !visible })}
                   >
                     {visible ? "Hide from site" : "Show on site"}
                   </button>

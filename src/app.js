@@ -77,8 +77,7 @@ async function buildApp() {
       logger,
       // Reuse the proxy's id so app logs line up with ALB/nginx logs.
       genReqId: (req, res) => {
-        const id =
-          req.headers["x-request-id"] || req.headers["x-amzn-trace-id"] || randomUUID();
+        const id = req.headers["x-request-id"] || req.headers["x-amzn-trace-id"] || randomUUID();
         res.setHeader("X-Request-Id", id);
         return id;
       },

@@ -25,12 +25,9 @@ function limiter(name, options) {
 // Keyed by contact rather than IP, so a victim can't be spammed with OTPs
 // from many addresses.
 function otpContactKey(req) {
-  const purpose =
-    typeof req.body?.purpose === "string" ? req.body.purpose : "unknown";
+  const purpose = typeof req.body?.purpose === "string" ? req.body.purpose : "unknown";
   const contact =
-    typeof req.body?.contact === "string"
-      ? req.body.contact.trim().toLowerCase()
-      : "unknown";
+    typeof req.body?.contact === "string" ? req.body.contact.trim().toLowerCase() : "unknown";
   return `${purpose}:${contact}`;
 }
 

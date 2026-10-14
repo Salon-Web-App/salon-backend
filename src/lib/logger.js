@@ -24,9 +24,7 @@ module.exports = pino({
   },
   timestamp: pino.stdTimeFunctions.isoTime,
   // pino can't use a custom level formatter together with a transport.
-  ...(transport
-    ? { transport }
-    : { formatters: { level: (label) => ({ level: label }) } }),
+  ...(transport ? { transport } : { formatters: { level: (label) => ({ level: label }) } }),
   redact: {
     paths: [
       "req.headers.authorization",

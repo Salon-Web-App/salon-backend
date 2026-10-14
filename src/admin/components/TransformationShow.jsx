@@ -93,15 +93,11 @@ const TransformationShow = (props) => {
     <div style={styles.page}>
       <div style={styles.photoPairWrap}>
         <div style={styles.photoWrap}>
-          {params.beforeUrl && (
-            <img src={params.beforeUrl} alt="Before" style={styles.photo} />
-          )}
+          {params.beforeUrl && <img src={params.beforeUrl} alt="Before" style={styles.photo} />}
           <span style={styles.photoLabel}>Before</span>
         </div>
         <div style={styles.photoWrap}>
-          {params.afterUrl && (
-            <img src={params.afterUrl} alt="After" style={styles.photo} />
-          )}
+          {params.afterUrl && <img src={params.afterUrl} alt="After" style={styles.photo} />}
           <span style={styles.photoLabel}>After</span>
         </div>
       </div>
@@ -113,10 +109,7 @@ const TransformationShow = (props) => {
             {params.active ? "Active" : "Inactive"}
           </span>
         </div>
-        <a
-          href={`${resource?.href || ""}/records/${params.id}/edit`}
-          style={styles.editBtn}
-        >
+        <a href={`${resource?.href || ""}/records/${params.id}/edit`} style={styles.editBtn}>
           Edit
         </a>
       </div>
@@ -135,9 +128,7 @@ const TransformationShow = (props) => {
           <div>
             <div style={styles.infoLabel}>Created</div>
             <div style={styles.infoValue}>
-              {params.createdAt
-                ? new Date(params.createdAt).toLocaleDateString()
-                : "—"}
+              {params.createdAt ? new Date(params.createdAt).toLocaleDateString() : "—"}
             </div>
           </div>
         </div>

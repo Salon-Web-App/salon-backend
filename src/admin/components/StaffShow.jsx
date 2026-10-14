@@ -75,15 +75,8 @@ function readServiceIds(record, propertyName) {
 
   const flatPrefix = `${propertyName}.`;
   return Object.keys(params)
-    .filter(
-      (key) =>
-        key.startsWith(flatPrefix) &&
-        /^\d+$/.test(key.slice(flatPrefix.length)),
-    )
-    .sort(
-      (a, b) =>
-        Number(a.slice(flatPrefix.length)) - Number(b.slice(flatPrefix.length)),
-    )
+    .filter((key) => key.startsWith(flatPrefix) && /^\d+$/.test(key.slice(flatPrefix.length)))
+    .sort((a, b) => Number(a.slice(flatPrefix.length)) - Number(b.slice(flatPrefix.length)))
     .map((key) => params[key])
     .filter((v) => v !== undefined && v !== null && v !== "");
 }
@@ -233,9 +226,7 @@ const StaffShow = (props) => {
         <div>
           <h1 style={styles.name}>{params.name || "Unnamed staff"}</h1>
           {params.specialty && (
-            <div style={{ fontSize: 14, color: "#8892a6", marginTop: 4 }}>
-              {params.specialty}
-            </div>
+            <div style={{ fontSize: 14, color: "#8892a6", marginTop: 4 }}>{params.specialty}</div>
           )}
           <span style={styles.statusBadge(params.active)}>
             {params.active ? "Active" : "Inactive"}
@@ -261,9 +252,7 @@ const StaffShow = (props) => {
           <div>
             <div style={styles.infoLabel}>Joined</div>
             <div style={styles.infoValue}>
-              {params.createdAt
-                ? new Date(params.createdAt).toLocaleDateString()
-                : "—"}
+              {params.createdAt ? new Date(params.createdAt).toLocaleDateString() : "—"}
             </div>
           </div>
         </div>
@@ -271,12 +260,8 @@ const StaffShow = (props) => {
 
       <div style={styles.section}>
         <div style={styles.sectionTitle}>Services</div>
-        {serviceIds.length === 0 && (
-          <div style={styles.empty}>No services assigned.</div>
-        )}
-        {serviceIds.length > 0 && !services && (
-          <div style={styles.empty}>Loading…</div>
-        )}
+        {serviceIds.length === 0 && <div style={styles.empty}>No services assigned.</div>}
+        {serviceIds.length > 0 && !services && <div style={styles.empty}>Loading…</div>}
         {serviceIds.length > 0 &&
           services &&
           (serviceNames.length > 0 ? (
@@ -288,15 +273,9 @@ const StaffShow = (props) => {
               ))}
             </div>
           ) : (
-            <div style={styles.empty}>
-              {serviceIds.length} service(s) assigned.
-            </div>
+            <div style={styles.empty}>{serviceIds.length} service(s) assigned.</div>
           ))}
-        {error && (
-          <div style={{ color: "#c0392b", fontSize: 13, marginTop: 6 }}>
-            {error}
-          </div>
-        )}
+        {error && <div style={{ color: "#c0392b", fontSize: 13, marginTop: 6 }}>{error}</div>}
       </div>
 
       <div style={styles.section}>

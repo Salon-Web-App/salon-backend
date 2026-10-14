@@ -26,15 +26,8 @@ function readArrayParam(record, propertyName) {
 
   const flatPrefix = `${propertyName}.`;
   return Object.keys(params)
-    .filter(
-      (key) =>
-        key.startsWith(flatPrefix) &&
-        /^\d+$/.test(key.slice(flatPrefix.length)),
-    )
-    .sort(
-      (a, b) =>
-        Number(a.slice(flatPrefix.length)) - Number(b.slice(flatPrefix.length)),
-    )
+    .filter((key) => key.startsWith(flatPrefix) && /^\d+$/.test(key.slice(flatPrefix.length)))
+    .sort((a, b) => Number(a.slice(flatPrefix.length)) - Number(b.slice(flatPrefix.length)))
     .map((key) => params[key])
     .filter((v) => v !== undefined && v !== null && v !== "");
 }
@@ -190,15 +183,10 @@ const PackageShow = (props) => {
           <span style={styles.statusBadge(params.active)}>
             {params.active ? "Active" : "Inactive"}
           </span>
-          {params.discountLabel && (
-            <span style={styles.discountBadge}>{params.discountLabel}</span>
-          )}
+          {params.discountLabel && <span style={styles.discountBadge}>{params.discountLabel}</span>}
         </div>
         <div style={styles.headerActions}>
-          <a
-            href={`${resource?.href || ""}/records/${params.id}/edit`}
-            style={styles.editBtn}
-          >
+          <a href={`${resource?.href || ""}/records/${params.id}/edit`} style={styles.editBtn}>
             Edit
           </a>
         </div>
@@ -215,15 +203,11 @@ const PackageShow = (props) => {
           </div>
           <div>
             <div style={styles.infoLabel}>Original price</div>
-            <div style={styles.infoValue}>
-              {formatPrice(params.originalPrice)}
-            </div>
+            <div style={styles.infoValue}>{formatPrice(params.originalPrice)}</div>
           </div>
           <div>
             <div style={styles.infoLabel}>Duration</div>
-            <div style={styles.infoValue}>
-              {formatDuration(params.durationMinutes)}
-            </div>
+            <div style={styles.infoValue}>{formatDuration(params.durationMinutes)}</div>
           </div>
           <div>
             <div style={styles.infoLabel}>Message</div>
@@ -236,9 +220,7 @@ const PackageShow = (props) => {
           <div>
             <div style={styles.infoLabel}>Created</div>
             <div style={styles.infoValue}>
-              {params.createdAt
-                ? new Date(params.createdAt).toLocaleDateString()
-                : "—"}
+              {params.createdAt ? new Date(params.createdAt).toLocaleDateString() : "—"}
             </div>
           </div>
         </div>
@@ -250,9 +232,7 @@ const PackageShow = (props) => {
 
       <div style={styles.section}>
         <div style={styles.sectionTitle}>Included services</div>
-        {serviceIds.length === 0 && (
-          <div style={styles.empty}>No services included.</div>
-        )}
+        {serviceIds.length === 0 && <div style={styles.empty}>No services included.</div>}
         {serviceIds.length > 0 &&
           (serviceNames.length > 0 ? (
             serviceNames.map((name) => (
@@ -261,9 +241,7 @@ const PackageShow = (props) => {
               </span>
             ))
           ) : (
-            <div style={styles.empty}>
-              {serviceIds.length} service(s) included.
-            </div>
+            <div style={styles.empty}>{serviceIds.length} service(s) included.</div>
           ))}
       </div>
     </div>

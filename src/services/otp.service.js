@@ -26,18 +26,10 @@ async function sendOtp({ contact, channel, purpose }) {
   const cooldownKey = otpCooldownKey(purpose, contact);
 
   // SET NX doubles as check-and-set, so there's no race between GET and SET.
-  const acquired = await redis.set(
-    cooldownKey,
-    "1",
-    "EX",
-    OTP_RESEND_COOLDOWN_SECONDS,
-    "NX",
-  );
+  const acquired = await redis.set(cooldownKey, "1", "EX", OTP_RESEND_COOLDOWN_SECONDS, "NX");
   if (!acquired) {
     const ttl = await redis.ttl(cooldownKey);
-    const err = new Error(
-      `Please wait ${Math.max(ttl, 1)}s before requesting another code.`,
-    );
+    const err = new Error(`Please wait ${Math.max(ttl, 1)}s before requesting another code.`);
     err.status = 429;
     err.expose = true;
     throw err;
@@ -105,11 +97,9 @@ async function verifyOtp({ contact, otp, purpose }) {
 
   await redis.del(key);
 
-  const verificationToken = jwt.sign(
-    { contact, purpose },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_VERIFICATION_EXPIRES_IN || "10m" },
-  );
+  const verificationToken = jwt.sign({ contact, purpose }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_VERIFICATION_EXPIRES_IN || "10m",
+  });
 
   return { verificationToken };
 }

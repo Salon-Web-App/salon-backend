@@ -38,9 +38,7 @@ const MOBILE_BREAKPOINT = 768;
 function useIsMobile(breakpoint = MOBILE_BREAKPOINT) {
   const query = `(max-width: ${breakpoint}px)`;
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" && window.matchMedia
-      ? window.matchMedia(query).matches
-      : false,
+    typeof window !== "undefined" && window.matchMedia ? window.matchMedia(query).matches : false,
   );
 
   useEffect(() => {
@@ -405,13 +403,7 @@ const styles = {
   },
 };
 
-function BookingCard({
-  booking,
-  staffOptions,
-  serviceOptions,
-  onChanged,
-  isMobile,
-}) {
+function BookingCard({ booking, staffOptions, serviceOptions, onChanged, isMobile }) {
   const p = booking.params || {};
   const isCompleted = p.status === "completed";
   const [busy, setBusy] = useState(false);
@@ -463,8 +455,7 @@ function BookingCard({
 
   function handleDelete(e) {
     e.stopPropagation();
-    if (window.confirm("Hide this booking? The customer is not notified."))
-      runAction("delete", {});
+    if (window.confirm("Hide this booking? The customer is not notified.")) runAction("delete", {});
   }
 
   function stop(e) {
@@ -494,41 +485,26 @@ function BookingCard({
         <div style={styles.body}>
           <div style={styles.topRow}>
             <span style={styles.name}>{p.customerName || "No name"}</span>
-            <span style={styles.statusBadge(p.status)}>
-              {statusLabel(p.status)}
-            </span>
+            <span style={styles.statusBadge(p.status)}>{statusLabel(p.status)}</span>
             <span style={styles.appId}>{p.applicationId}</span>
           </div>
 
           <div style={styles.service}>
-            {serviceName ||
-              (p.serviceId ? `Unknown service (${p.serviceId})` : "No service")}
+            {serviceName || (p.serviceId ? `Unknown service (${p.serviceId})` : "No service")}
           </div>
 
           <div style={styles.sectionLabel}>Contact</div>
           <div>
-            {p.customerPhone && (
-              <span style={styles.chip}>{p.customerPhone}</span>
-            )}
-            {p.customerEmail && (
-              <span style={styles.chip}>{p.customerEmail}</span>
-            )}
+            {p.customerPhone && <span style={styles.chip}>{p.customerPhone}</span>}
+            {p.customerEmail && <span style={styles.chip}>{p.customerEmail}</span>}
             {!p.customerPhone && !p.customerEmail && (
               <span style={styles.empty}>No contact details</span>
             )}
-            {p.phoneVerified && (
-              <span style={styles.verified}>Phone verified</span>
-            )}
-            {p.emailVerified && (
-              <span style={styles.verified}>Email verified</span>
-            )}
+            {p.phoneVerified && <span style={styles.verified}>Phone verified</span>}
+            {p.emailVerified && <span style={styles.verified}>Email verified</span>}
           </div>
 
-          {error && (
-            <div style={{ ...styles.error, marginTop: 10, marginBottom: 0 }}>
-              {error}
-            </div>
-          )}
+          {error && <div style={{ ...styles.error, marginTop: 10, marginBottom: 0 }}>{error}</div>}
         </div>
       </div>
 
@@ -537,12 +513,7 @@ function BookingCard({
           <div style={{ ...styles.panelHeader, marginTop: 0 }}>Appointment</div>
           {!isCompleted && (
             <div style={styles.panelActions}>
-              <button
-                type="button"
-                style={styles.topBtn}
-                disabled={busy}
-                onClick={handleCancel}
-              >
+              <button type="button" style={styles.topBtn} disabled={busy} onClick={handleCancel}>
                 Cancel
               </button>
               <button
@@ -569,13 +540,9 @@ function BookingCard({
         ) : (
           <div
             style={styles.clickableField}
-            onClick={() =>
-              setPanel(panel === "reschedule" ? null : "reschedule")
-            }
+            onClick={() => setPanel(panel === "reschedule" ? null : "reschedule")}
             onMouseEnter={(e) => (e.currentTarget.style.background = "#eef1f7")}
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "transparent")
-            }
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             title="Click to reschedule"
           >
             <div style={styles.fieldHint}>Starts (click to change)</div>
@@ -616,9 +583,7 @@ function BookingCard({
             {staffName ? (
               <span style={styles.staffLink}>{staffName}</span>
             ) : p.staffId ? (
-              <span
-                style={styles.staffNone}
-              >{`Unknown staff (${p.staffId})`}</span>
+              <span style={styles.staffNone}>{`Unknown staff (${p.staffId})`}</span>
             ) : (
               <span style={styles.staffNone}>Not assigned</span>
             )}
@@ -628,18 +593,14 @@ function BookingCard({
             style={{ ...styles.clickableField, marginTop: 14 }}
             onClick={() => setPanel(panel === "reassign" ? null : "reassign")}
             onMouseEnter={(e) => (e.currentTarget.style.background = "#eef1f7")}
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "transparent")
-            }
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             title="Click to reassign"
           >
             <div style={styles.fieldHint}>Staff (click to change)</div>
             {staffName ? (
               <span style={styles.staffLink}>{staffName}</span>
             ) : p.staffId ? (
-              <span
-                style={styles.staffNone}
-              >{`Unknown staff (${p.staffId})`}</span>
+              <span style={styles.staffNone}>{`Unknown staff (${p.staffId})`}</span>
             ) : (
               <span style={styles.staffNone}>Not assigned</span>
             )}
@@ -671,11 +632,7 @@ function BookingCard({
           </div>
         )}
 
-        {isCompleted && (
-          <div style={styles.completedNote}>
-            Completed — no changes possible.
-          </div>
-        )}
+        {isCompleted && <div style={styles.completedNote}>Completed — no changes possible.</div>}
       </div>
     </div>
   );
@@ -691,9 +648,7 @@ const BookingCardList = () => {
   // --- Filters ---
   const [statusFilter, setStatusFilter] = useState("all");
   // "all" | "svc:<id>" | "pkg:<id>"
-  const [serviceFilter, setServiceFilter] = useState(
-    getServiceOrPackageFilterFromUrl(),
-  );
+  const [serviceFilter, setServiceFilter] = useState(getServiceOrPackageFilterFromUrl());
   const [staffFilterId, setStaffFilterId] = useState(getStaffIdFilterFromUrl());
   const [dateFilter, setDateFilter] = useState(""); // yyyy-mm-dd, "" = all dates
 
@@ -747,9 +702,7 @@ const BookingCardList = () => {
       );
     } catch (err) {
       setBookings([]);
-      setError(
-        err.message || "Bookings could not be loaded. Refresh to retry.",
-      );
+      setError(err.message || "Bookings could not be loaded. Refresh to retry.");
     }
   }
 
@@ -766,9 +719,7 @@ const BookingCardList = () => {
       load();
       return;
     }
-    setBookings((prev) =>
-      prev.map((b) => (b.id === updatedRecord.id ? updatedRecord : b)),
-    );
+    setBookings((prev) => prev.map((b) => (b.id === updatedRecord.id ? updatedRecord : b)));
   }
 
   function clearFilters() {
@@ -788,9 +739,7 @@ const BookingCardList = () => {
   const live = bookings.filter((b) => !b.params?.deletedAt);
 
   const visible = live
-    .filter((b) =>
-      statusFilter === "all" ? true : b.params?.status === statusFilter,
-    )
+    .filter((b) => (statusFilter === "all" ? true : b.params?.status === statusFilter))
     .filter((b) => {
       if (serviceFilter === "all") return true;
       const [type, id] = serviceFilter.split(":");
@@ -799,23 +748,15 @@ const BookingCardList = () => {
       return true;
     })
     .filter((b) => (staffFilterId ? b.params?.staffId === staffFilterId : true))
-    .filter((b) =>
-      dateFilter ? toDateInputValue(b.params?.startTime) === dateFilter : true,
-    )
-    .sort(
-      (a, b) => new Date(b.params?.startTime) - new Date(a.params?.startTime),
-    );
+    .filter((b) => (dateFilter ? toDateInputValue(b.params?.startTime) === dateFilter : true))
+    .sort((a, b) => new Date(b.params?.startTime) - new Date(a.params?.startTime));
 
   const filteredStaffName = staffFilterId
-    ? staffOptions.find((s) => s.id === staffFilterId)?.name ||
-      "this staff member"
+    ? staffOptions.find((s) => s.id === staffFilterId)?.name || "this staff member"
     : null;
 
   const hasActiveFilter =
-    statusFilter !== "all" ||
-    serviceFilter !== "all" ||
-    !!staffFilterId ||
-    !!dateFilter;
+    statusFilter !== "all" || serviceFilter !== "all" || !!staffFilterId || !!dateFilter;
 
   return (
     <div style={styles.page}>
@@ -904,11 +845,7 @@ const BookingCardList = () => {
         </div>
 
         {hasActiveFilter && (
-          <button
-            type="button"
-            style={styles.clearFilter}
-            onClick={clearFilters}
-          >
+          <button type="button" style={styles.clearFilter} onClick={clearFilters}>
             Clear filter
           </button>
         )}
@@ -916,9 +853,7 @@ const BookingCardList = () => {
 
       {visible.length === 0 ? (
         <div style={styles.loading}>
-          {hasActiveFilter
-            ? "No bookings match these filters."
-            : "No bookings yet."}
+          {hasActiveFilter ? "No bookings match these filters." : "No bookings yet."}
         </div>
       ) : (
         <div style={styles.list}>

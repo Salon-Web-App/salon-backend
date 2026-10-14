@@ -32,9 +32,9 @@ make stack-reset   # also drops the stack database
 
 ## Checks
 
-| Check | Command | Expected |
-|---|---|---|
-| Load spread | `for i in $(seq 10); do curl -s -o /dev/null -D - localhost:8080/api/services \| grep -i x-upstream; done \| sort \| uniq -c` | two upstreams |
-| Shared rate limit | 7× wrong `POST /api/admin/auth/login` | 401 … then 429 |
-| Replica stop | `docker stop salon-stack-backend-1` during a curl loop | only 200s, exit code 0 |
-| Clean shutdown | `docker compose down` | every container stops in ~1s |
+| Check             | Command                                                                                                                       | Expected                     |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| Load spread       | `for i in $(seq 10); do curl -s -o /dev/null -D - localhost:8080/api/services \| grep -i x-upstream; done \| sort \| uniq -c` | two upstreams                |
+| Shared rate limit | 7× wrong `POST /api/admin/auth/login`                                                                                         | 401 … then 429               |
+| Replica stop      | `docker stop salon-stack-backend-1` during a curl loop                                                                        | only 200s, exit code 0       |
+| Clean shutdown    | `docker compose down`                                                                                                         | every container stops in ~1s |

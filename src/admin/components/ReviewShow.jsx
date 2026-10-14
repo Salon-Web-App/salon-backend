@@ -83,7 +83,13 @@ const styles = {
     fontSize: 14,
     fontWeight: 700,
   },
-  orderValue: { fontSize: 14, fontWeight: 600, color: "#1a1d24", minWidth: 24, textAlign: "center" },
+  orderValue: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: "#1a1d24",
+    minWidth: 24,
+    textAlign: "center",
+  },
   toggleBtn: (visible) => ({
     fontSize: 13,
     fontWeight: 600,
@@ -162,9 +168,7 @@ const ReviewShow = (props) => {
           <h1 style={styles.name}>{booking?.customerName || "Unknown customer"}</h1>
           <Stars rating={params.rating} />
           <div>
-            <span style={styles.visBadge(visible)}>
-              {visible ? "Visible on site" : "Hidden"}
-            </span>
+            <span style={styles.visBadge(visible)}>{visible ? "Visible on site" : "Hidden"}</span>
           </div>
         </div>
       </div>
@@ -199,9 +203,7 @@ const ReviewShow = (props) => {
           <div>
             <div style={styles.infoLabel}>Submitted</div>
             <div style={styles.infoValue}>
-              {params.createdAt
-                ? new Date(params.createdAt).toLocaleString()
-                : "—"}
+              {params.createdAt ? new Date(params.createdAt).toLocaleString() : "—"}
             </div>
           </div>
         </div>
@@ -211,9 +213,7 @@ const ReviewShow = (props) => {
         <div style={styles.sectionTitle}>Admin controls</div>
         <div style={styles.controlsRow}>
           <div>
-            <div style={{ ...styles.infoLabel, marginBottom: 6 }}>
-              Display order
-            </div>
+            <div style={{ ...styles.infoLabel, marginBottom: 6 }}>Display order</div>
             <div style={styles.orderRow}>
               <button
                 type="button"
@@ -237,16 +237,12 @@ const ReviewShow = (props) => {
             </div>
           </div>
           <div>
-            <div style={{ ...styles.infoLabel, marginBottom: 6 }}>
-              Visibility
-            </div>
+            <div style={{ ...styles.infoLabel, marginBottom: 6 }}>Visibility</div>
             <button
               type="button"
               style={styles.toggleBtn(visible)}
               disabled={busy}
-              onClick={() =>
-                runAction("toggleVisibility", { approved: !visible })
-              }
+              onClick={() => runAction("toggleVisibility", { approved: !visible })}
             >
               {visible ? "Hide from site" : "Show on site"}
             </button>

@@ -99,9 +99,7 @@ const BookingHistoryShow = (props) => {
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>{statusLabel(params.changeType)}</h1>
-          <span style={styles.badge(params.changeType)}>
-            {statusLabel(params.changeType)}
-          </span>
+          <span style={styles.badge(params.changeType)}>{statusLabel(params.changeType)}</span>
         </div>
       </div>
 
@@ -123,9 +121,7 @@ const BookingHistoryShow = (props) => {
           <div>
             <div style={styles.infoLabel}>When</div>
             <div style={styles.infoValue}>
-              {params.createdAt
-                ? new Date(params.createdAt).toLocaleString()
-                : "—"}
+              {params.createdAt ? new Date(params.createdAt).toLocaleString() : "—"}
             </div>
           </div>
         </div>
@@ -138,9 +134,7 @@ const BookingHistoryShow = (props) => {
           <div style={styles.infoGrid}>
             <div>
               <div style={styles.infoLabel}>Customer</div>
-              <div style={styles.infoValue}>
-                {booking.customerName || "—"}
-              </div>
+              <div style={styles.infoValue}>{booking.customerName || "—"}</div>
             </div>
             <div>
               <div style={styles.infoLabel}>Application ID</div>

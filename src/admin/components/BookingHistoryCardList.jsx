@@ -154,11 +154,9 @@ const BookingHistoryCardList = (props) => {
         };
       });
       setBookings(byId);
-      const rows = (historyRes?.data?.records || [])
-        .sort(
-          (a, b) =>
-            new Date(b.params?.createdAt) - new Date(a.params?.createdAt),
-        );
+      const rows = (historyRes?.data?.records || []).sort(
+        (a, b) => new Date(b.params?.createdAt) - new Date(a.params?.createdAt),
+      );
       setEntries(rows);
     });
     return () => {
@@ -166,12 +164,9 @@ const BookingHistoryCardList = (props) => {
     };
   }, []);
 
-  if (!entries)
-    return <div style={styles.loading}>Loading booking history…</div>;
+  if (!entries) return <div style={styles.loading}>Loading booking history…</div>;
 
-  const changeTypes = Array.from(
-    new Set(entries.map((e) => e.params?.changeType).filter(Boolean)),
-  );
+  const changeTypes = Array.from(new Set(entries.map((e) => e.params?.changeType).filter(Boolean)));
 
   const visible = entries.filter((e) =>
     typeFilter === "all" ? true : e.params?.changeType === typeFilter,
@@ -221,8 +216,7 @@ const BookingHistoryCardList = (props) => {
                   window.location.href = `${resource?.href || ""}/records/${p.id}/show`;
                 }}
                 onMouseEnter={(ev) => {
-                  ev.currentTarget.style.boxShadow =
-                    "0 2px 8px rgba(0,0,0,0.06)";
+                  ev.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)";
                   ev.currentTarget.style.borderColor = "#c9cedb";
                 }}
                 onMouseLeave={(ev) => {

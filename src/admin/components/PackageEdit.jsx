@@ -32,15 +32,8 @@ function readArrayParam(record, propertyName) {
 
   const flatPrefix = `${propertyName}.`;
   return Object.keys(params)
-    .filter(
-      (key) =>
-        key.startsWith(flatPrefix) &&
-        /^\d+$/.test(key.slice(flatPrefix.length)),
-    )
-    .sort(
-      (a, b) =>
-        Number(a.slice(flatPrefix.length)) - Number(b.slice(flatPrefix.length)),
-    )
+    .filter((key) => key.startsWith(flatPrefix) && /^\d+$/.test(key.slice(flatPrefix.length)))
+    .sort((a, b) => Number(a.slice(flatPrefix.length)) - Number(b.slice(flatPrefix.length)))
     .map((key) => params[key])
     .filter((v) => v !== undefined && v !== null && v !== "");
 }
@@ -248,12 +241,8 @@ const PackageEdit = (props) => {
     };
   }, []);
 
-  const selectedServices = allServices.filter((s) =>
-    selectedServiceIds.includes(s.value),
-  );
-  const availableServiceOptions = allServices.filter(
-    (s) => !selectedServiceIds.includes(s.value),
-  );
+  const selectedServices = allServices.filter((s) => selectedServiceIds.includes(s.value));
+  const availableServiceOptions = allServices.filter((s) => !selectedServiceIds.includes(s.value));
 
   function handleAddService(selected) {
     if (!selected) return;
@@ -381,10 +370,7 @@ const PackageEdit = (props) => {
               checked={fields.active}
               onChange={() => setField("active", !fields.active)}
             />
-            <label
-              htmlFor="package-active"
-              style={{ fontSize: 13, color: "#555" }}
-            >
+            <label htmlFor="package-active" style={{ fontSize: 13, color: "#555" }}>
               Active
             </label>
           </div>
@@ -482,9 +468,7 @@ const PackageEdit = (props) => {
         <Select
           isLoading={servicesLoading}
           placeholder={
-            availableServiceOptions.length
-              ? "Add a service…"
-              : "All services are already included"
+            availableServiceOptions.length ? "Add a service…" : "All services are already included"
           }
           options={availableServiceOptions}
           value={null}
@@ -503,12 +487,7 @@ const PackageEdit = (props) => {
         >
           {saving ? "Saving…" : "Save Changes"}
         </button>
-        <button
-          type="button"
-          style={styles.cancelBtn}
-          disabled={saving}
-          onClick={handleCancel}
-        >
+        <button type="button" style={styles.cancelBtn} disabled={saving} onClick={handleCancel}>
           Cancel
         </button>
       </div>
