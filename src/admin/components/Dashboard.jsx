@@ -500,7 +500,7 @@ const Dashboard = () => {
       <div style={styles.headerRow}>
         <div>
           <div style={styles.greeting}>{greeting()}, Admin 👋</div>
-          <div style={styles.subGreeting}>Here's what's happening at your salon.</div>
+          <div style={styles.subGreeting}>Here&apos;s what&apos;s happening at your salon.</div>
         </div>
         <div style={styles.dateBadge}>{rangeLabel}</div>
       </div>

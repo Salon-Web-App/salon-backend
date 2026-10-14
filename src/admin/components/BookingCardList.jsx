@@ -709,7 +709,7 @@ const BookingCardList = () => {
   useEffect(() => {
     load();
     setStaffFilterId(getStaffIdFilterFromUrl());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   function handleBookingChanged(updatedRecord) {

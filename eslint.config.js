@@ -2,6 +2,7 @@ const js = require("@eslint/js");
 const globals = require("globals");
 const react = require("eslint-plugin-react");
 const prettier = require("eslint-config-prettier");
+const reactHooks = require("eslint-plugin-react-hooks");
 
 module.exports = [
   { ignores: ["node_modules/", ".adminjs/", "coverage/", "prisma/migrations/"] },
@@ -27,9 +28,9 @@ module.exports = [
   },
 
   // AdminJS custom components are ESM + JSX and run in the browser.
-  {
+{
     files: ["src/admin/components/**/*.jsx"],
-    plugins: { react },
+    plugins: { react, "react-hooks": reactHooks },
     languageOptions: {
       sourceType: "module",
       parserOptions: { ecmaFeatures: { jsx: true } },
@@ -38,6 +39,7 @@ module.exports = [
     settings: { react: { version: "detect" } },
     rules: {
       ...react.configs.recommended.rules,
+      ...reactHooks.configs.recommended.rules,
       "react/prop-types": "off",
       "react/react-in-jsx-scope": "off",
     },

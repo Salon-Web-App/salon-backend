@@ -1,106 +1,21 @@
-// AdminJS v7+ ships as ESM-only, but the rest of this backend is CommonJS.
-// Rather than converting the whole project to ESM (which would break
-// Express/Prisma interop and every other require() call), we load AdminJS's
-// packages with a dynamic import() inside this one async function. That's
-// the officially recommended way to consume an ESM-only package from CJS.
+// AdminJS v7 is ESM-only; the rest of the backend is CommonJS, so AdminJS
+// packages are loaded with dynamic import() inside mountAdminPanel.
 //
-// This mounts a full CRUD UI (list/create/edit/delete + relations) over
-// Staff, Service, Booking, BookingHistory, and Review — reusing the exact
-// same Prisma models/tables as your hand-built /admin REST API. AdminUser
-// itself is intentionally NOT exposed as a resource, so nobody can browse
-// to a screen showing password hashes.
-//
-// Mounted at /backoffice (NOT /admin) because /admin is already used by
-// your custom REST API routes in src/routes/admin/*.
+// Mounted at /backoffice. AdminUser is deliberately not exposed as a
+// resource so password hashes never appear in the UI.
 const bcrypt = require("bcryptjs");
-const prisma = require("../lib/prisma");
-const { enqueueNotification } = require("../jobs/queue");
-const { uploadImageBuffer } = require("../lib/cloudinary");
 const RedisStore = require("connect-redis").default;
+const prisma = require("../lib/prisma");
 const redis = require("../lib/redis");
 const { cookieSecure } = require("../config");
+const { enqueueNotification } = require("../jobs/queue");
+const { uploadImageBuffer } = require("../lib/cloudinary");
 
-// Same constant as src/controllers/admin/auth.controller.js — used only as
-// a bcrypt.compare target for the "user not found" login path, never to
-// actually authenticate anyone.
+// Compared against when the email doesn't exist, so unknown emails take as
+// long as wrong passwords and can't be enumerated by timing.
 const DUMMY_ADMIN_HASH = "$2b$10$CwTycUXWue0Thq9StjUM0uJ8Q/6yGa5eXeI5EofrOakYFdhaVwYbW";
 
-async function bookingEditBefore(request) {
-  if (request.method !== "post") return request;
-
-  const bookingId = request.params.recordId;
-  const existing = await prisma.booking.findUnique({
-    where: { id: bookingId },
-    include: { service: true },
-  });
-  if (!existing) return request;
-
-  const historyEntries = [];
-  let notifyType = null;
-  const { payload } = request;
-
-  if (payload.staffId && payload.staffId !== existing.staffId) {
-    historyEntries.push({
-      changeType: "staff_assigned",
-      oldValue: existing.staffId,
-      newValue: payload.staffId,
-      changedBy: "admin",
-    });
-    notifyType = "booking.staff_assigned";
-  }
-
-  if (payload.startTime) {
-    const newStart = new Date(payload.startTime);
-    if (newStart.getTime() !== existing.startTime.getTime()) {
-      const durationMs = existing.service.durationMinutes * 60 * 1000;
-      payload.endTime = new Date(newStart.getTime() + durationMs).toISOString();
-      historyEntries.push({
-        changeType: "reschedule",
-        oldValue: existing.startTime.toISOString(),
-        newValue: newStart.toISOString(),
-        changedBy: "admin",
-      });
-      notifyType = notifyType || "booking.rescheduled";
-    }
-  }
-
-  if (payload.status && payload.status !== existing.status) {
-    historyEntries.push({
-      changeType: "status_change",
-      oldValue: existing.status,
-      newValue: payload.status,
-      changedBy: "admin",
-    });
-    if (payload.status === "cancelled") notifyType = "booking.cancelled";
-  }
-
-  request.session = request.session || {};
-  request._bookingChanges = { bookingId, historyEntries, notifyType };
-
-  return request;
-}
-
-async function bookingEditAfter(response, request) {
-  const changes = request._bookingChanges;
-  if (!changes) return response;
-
-  for (const entry of changes.historyEntries) {
-    await prisma.bookingHistory.create({
-      data: { bookingId: changes.bookingId, ...entry },
-    });
-  }
-  if (changes.notifyType) {
-    await enqueueNotification(changes.notifyType, {
-      bookingId: changes.bookingId,
-    });
-  }
-
-  return response;
-}
-
-// The custom WorkingHoursEdit component submits workingHours as a JSON
-// string; Prisma's Json column needs an actual object. This converts it
-// just before the record is written.
+// WorkingHoursEdit submits JSON as a string; the Prisma Json column needs an object.
 function parseWorkingHours(request) {
   const raw = request.payload?.workingHours;
   if (typeof raw === "string" && raw.trim()) {
@@ -113,10 +28,8 @@ function parseWorkingHours(request) {
   return request;
 }
 
-// Detects a base64 data URL (set by PhotoUploadEdit when a new file is
-// picked) and swaps it for a real Cloudinary URL before Prisma writes it.
-// If the field is untouched (still a normal https:// URL, or empty), this
-// is a no-op.
+// PhotoUploadEdit sends a base64 data URL for a newly picked file; swap it
+// for a Cloudinary URL before the record is written.
 function makePhotoUploadHook(fieldName, folder) {
   return async function uploadPhotoIfNeeded(request) {
     const value = request.payload?.[fieldName];
@@ -131,18 +44,7 @@ function makePhotoUploadHook(fieldName, folder) {
     return request;
   };
 }
-function makeMediaUploadHook(fieldName, folder, resourceType = "auto") {
-  return async function uploadMediaIfNeeded(request) {
-    const value = request.payload?.[fieldName];
-    if (typeof value === "string" && value.startsWith("data:")) {
-      const match = value.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
-      if (!match) throw new Error("That file could not be read.");
-      const buffer = Buffer.from(match[2], "base64");
-      request.payload[fieldName] = await uploadImageBuffer(buffer, folder, resourceType);
-    }
-    return request;
-  };
-}
+
 async function logAndNotify(bookingId, changeType, oldValue, newValue, notifyType) {
   await prisma.bookingHistory.create({
     data: { bookingId, changeType, oldValue, newValue, changedBy: "admin" },
@@ -150,20 +52,15 @@ async function logAndNotify(bookingId, changeType, oldValue, newValue, notifyTyp
   if (notifyType) await enqueueNotification(notifyType, { bookingId });
 }
 
-// Prisma many-to-many relations (Staff <-> Service) aren't reliably
-// written by @adminjs/prisma's generic update() — passing a raw array of
-// ids for an isArray reference property often gets silently dropped
-// instead of being translated into the `{ set: [...] }` syntax Prisma
-// needs for relation writes. So we pull the submitted service ids out of
-// the payload ourselves in `before`, strip them so AdminJS's default
-// update doesn't choke on them, then apply the relation write directly
-// via Prisma in `after`.
+// @adminjs/prisma doesn't reliably write many-to-many relations, so service
+// ids are pulled out of the payload in `before` and written with Prisma in
+// `after`. Used by both Staff and Package.
 function extractServiceIds(request) {
   const raw = request.payload?.services;
 
   if (Array.isArray(raw)) return raw.filter(Boolean);
 
-  // Fallback 1: flattened dot-notation form (services.0, services.1, ...)
+  // Flattened form: services.0, services.1, ...
   const dotKeys = Object.keys(request.payload || {})
     .filter((key) => key.startsWith("services."))
     .sort((a, b) => Number(a.split(".")[1]) - Number(b.split(".")[1]))
@@ -171,8 +68,7 @@ function extractServiceIds(request) {
     .filter(Boolean);
   if (dotKeys.length) return dotKeys;
 
-  // Fallback 2: comma-joined string (can happen if an array value gets
-  // coerced through FormData.append, which calls toString() on it).
+  // FormData.append stringifies arrays to "a,b,c".
   if (typeof raw === "string" && raw) {
     return raw
       .split(",")
@@ -180,7 +76,7 @@ function extractServiceIds(request) {
       .filter(Boolean);
   }
 
-  return undefined; // field wasn't touched in this submission
+  return undefined; // field not submitted
 }
 
 function stripServicesFromPayload(request) {
@@ -200,7 +96,7 @@ async function staffEditBefore(request) {
 
 async function staffEditAfter(response, request) {
   const serviceIds = request._staffServiceIds;
-  if (serviceIds === undefined) return response; // field wasn't submitted, leave relation untouched
+  if (serviceIds === undefined) return response;
   const staffId = response?.record?.params?.id;
   if (!staffId) return response;
 
@@ -212,11 +108,8 @@ async function staffEditAfter(response, request) {
   return response;
 }
 
-// @adminjs/prisma's default list/show/edit queries don't include the
-// Staff<->Service many-to-many relation, so record.params.services is
-// simply absent — not empty, not oddly-shaped, just never fetched. We
-// pull it ourselves and attach it as a plain array of ids, which is the
-// shape ServicesEdit/ServicesList already expect.
+// The default queries don't load the Staff<->Service relation, so attach the
+// ids for the custom components.
 async function attachStaffServices(records) {
   const staffIds = records.map((r) => r.params?.id).filter(Boolean);
   if (!staffIds.length) return records;
@@ -250,23 +143,9 @@ async function staffRecordAfter(response) {
   return response;
 }
 
-// staffId / serviceId are the scalar FK columns behind Booking's `staff`
-// and `service` Prisma relations. @adminjs/prisma does not reliably keep
-// those raw FK columns in a record's serialized params once a relation is
-// defined over them (visible as "[AdminJS]: There is no property of the
-// name: 'staffId'" in the server log) — declaring them under
-// options.properties does NOT fix this, since the property-driven
-// serialization step still runs first and drops them before any override
-// is applied. So, same as attachStaffServices above, we re-fetch the raw
-// columns straight from Prisma and attach them onto record.params
-// directly, after AdminJS has already built its response — this bypasses
-// the property system entirely and is the same trick already used for
-// the Staff<->Service many-to-many relation.
-//
-// IMPORTANT: these are only useful if actually wired into an action's
-// `after` array below. Defining them here does nothing on their own —
-// that was the actual bug: the functions existed but no action ever
-// called them.
+// @adminjs/prisma drops scalar FK columns that sit behind a relation from
+// record.params, and declaring them under `properties` doesn't help. Re-read
+// them from Prisma after AdminJS has built the response.
 async function attachBookingIds(records) {
   const bookingIds = records.map((r) => r.params?.id).filter(Boolean);
   if (!bookingIds.length) return records;
@@ -304,9 +183,6 @@ async function bookingRecordAfter(response) {
   return response;
 }
 
-// Same many-to-many write problem as Staff<->Service (see extractServiceIds
-// above, which this reuses as-is since it only reads request.payload.services
-// regardless of which resource is submitting it), but for Package<->Service.
 async function attachPackageServices(records) {
   const packageIds = records.map((r) => r.params?.id).filter(Boolean);
   if (!packageIds.length) return records;
@@ -361,10 +237,6 @@ async function packageEditAfter(response, request) {
   return response;
 }
 
-// Reviews are never hand-edited (rating/comment/booking all come from the
-// customer) — the only two things an admin can change are display order
-// and public visibility, both exposed as hidden record actions called
-// directly from ReviewCardList/ReviewShow rather than a generic edit form.
 async function reviewReorderHandler(request, response, context) {
   const { record, currentAdmin, resource } = context;
   const direction = request.payload?.direction;
@@ -378,7 +250,6 @@ async function reviewReorderHandler(request, response, context) {
 
   const neighborIndex = direction === "up" ? index - 1 : index + 1;
   if (neighborIndex < 0 || neighborIndex >= all.length) {
-    // Already at the edge — nothing to do.
     const updated = await resource.findOne(record.id());
     return { record: updated.toJSON(currentAdmin) };
   }
@@ -387,14 +258,8 @@ async function reviewReorderHandler(request, response, context) {
   const neighbor = all[neighborIndex];
 
   await prisma.$transaction([
-    prisma.review.update({
-      where: { id: current.id },
-      data: { order: neighbor.order },
-    }),
-    prisma.review.update({
-      where: { id: neighbor.id },
-      data: { order: current.order },
-    }),
+    prisma.review.update({ where: { id: current.id }, data: { order: neighbor.order } }),
+    prisma.review.update({ where: { id: neighbor.id }, data: { order: current.order } }),
   ]);
 
   const updated = await resource.findOne(record.id());
@@ -404,19 +269,12 @@ async function reviewReorderHandler(request, response, context) {
 async function reviewToggleVisibilityHandler(request, response, context) {
   const { record, currentAdmin, resource } = context;
   const approved = Boolean(request.payload?.approved);
-  await prisma.review.update({
-    where: { id: record.id() },
-    data: { approved },
-  });
+  await prisma.review.update({ where: { id: record.id() }, data: { approved } });
   const updated = await resource.findOne(record.id());
   return { record: updated.toJSON(currentAdmin) };
 }
 
-// A completed booking is done — the customer has already had their
-// appointment, so nothing about it should be changeable through the admin
-// panel anymore (no reassign, reschedule, cancel, or delete). This is
-// checked server-side, not just hidden in the UI, so the restriction
-// holds even if someone calls the action directly.
+// Enforced server-side so it holds even when an action is called directly.
 function assertBookingEditable(existing) {
   if (existing?.status === "completed") {
     throw new Error("This booking is completed and can no longer be changed.");
@@ -424,12 +282,6 @@ function assertBookingEditable(existing) {
 }
 
 async function mountAdminPanel(app) {
-  if (!process.env.ADMIN_SESSION_SECRET) {
-    throw new Error(
-      "ADMIN_SESSION_SECRET is not set. Add it to your .env file (any long random string) before starting the server.",
-    );
-  }
-
   const { default: AdminJS, ComponentLoader } = await import("adminjs");
   const { default: AdminJSExpress } = await import("@adminjs/express");
   const { Database, Resource, getModelByName } = await import("@adminjs/prisma");
@@ -437,88 +289,30 @@ async function mountAdminPanel(app) {
   AdminJS.registerAdapter({ Database, Resource });
 
   const componentLoader = new ComponentLoader();
+  const component = (name, file) =>
+    componentLoader.add(name, require.resolve(`./components/${file}.jsx`));
+
   const Components = {
-    WorkingHoursEdit: componentLoader.add(
-      "WorkingHoursEdit",
-      require.resolve("./components/WorkingHoursEdit.jsx"),
-    ),
-    PhotoUploadEdit: componentLoader.add(
-      "PhotoUploadEdit",
-      require.resolve("./components/PhotoUploadEdit.jsx"),
-    ),
-    ServicesEdit: componentLoader.add(
-      "ServicesEdit",
-      require.resolve("./components/ServiceEdit.jsx"),
-    ),
-    StaffShow: componentLoader.add("StaffShow", require.resolve("./components/StaffShow.jsx")),
-    StaffEdit: componentLoader.add("StaffEdit", require.resolve("./components/StaffEdit.jsx")),
-    StaffCardList: componentLoader.add(
-      "StaffCardList",
-      require.resolve("./components/StaffCardList.jsx"),
-    ),
-    // Booking list, show, and edit now follow the same card/profile
-    // design language as the Staff pages above. BookingGrid.jsx (the old
-    // table-style grid) has been replaced by BookingCardList.jsx.
-    BookingCardList: componentLoader.add(
-      "BookingCardList",
-      require.resolve("./components/BookingCardList.jsx"),
-    ),
-    BookingShow: componentLoader.add(
-      "BookingShow",
-      require.resolve("./components/BookingShow.jsx"),
-    ),
-    // Service, Package, BookingHistory, Review, and Transformation now
-    // follow the same card/profile design language as Staff and Booking.
-    ServiceCardList: componentLoader.add(
-      "ServiceCardList",
-      require.resolve("./components/ServiceCardList.jsx"),
-    ),
-    ServiceShow: componentLoader.add(
-      "ServiceShow",
-      require.resolve("./components/ServiceShow.jsx"),
-    ),
-    ServiceEdit: componentLoader.add(
-      "ServiceEdit",
-      require.resolve("./components/ServiceEdit.jsx"),
-    ),
-    PackageCardList: componentLoader.add(
-      "PackageCardList",
-      require.resolve("./components/PackageCardList.jsx"),
-    ),
-    PackageShow: componentLoader.add(
-      "PackageShow",
-      require.resolve("./components/PackageShow.jsx"),
-    ),
-    PackageEdit: componentLoader.add(
-      "PackageEdit",
-      require.resolve("./components/PackageEdit.jsx"),
-    ),
-    BookingHistoryCardList: componentLoader.add(
-      "BookingHistoryCardList",
-      require.resolve("./components/BookingHistoryCardList.jsx"),
-    ),
-    BookingHistoryShow: componentLoader.add(
-      "BookingHistoryShow",
-      require.resolve("./components/BookingHistoryShow.jsx"),
-    ),
-    ReviewCardList: componentLoader.add(
-      "ReviewCardList",
-      require.resolve("./components/ReviewCardList.jsx"),
-    ),
-    ReviewShow: componentLoader.add("ReviewShow", require.resolve("./components/ReviewShow.jsx")),
-    TransformationCardList: componentLoader.add(
-      "TransformationCardList",
-      require.resolve("./components/TransformationCardList.jsx"),
-    ),
-    TransformationShow: componentLoader.add(
-      "TransformationShow",
-      require.resolve("./components/TransformationShow.jsx"),
-    ),
-    TransformationEdit: componentLoader.add(
-      "TransformationEdit",
-      require.resolve("./components/TransformationEdit.jsx"),
-    ),
-    Dashboard: componentLoader.add("Dashboard", require.resolve("./components/Dashboard.jsx")),
+    Dashboard: component("Dashboard", "Dashboard"),
+    WorkingHoursEdit: component("WorkingHoursEdit", "WorkingHoursEdit"),
+    PhotoUploadEdit: component("PhotoUploadEdit", "PhotoUploadEdit"),
+    ServicesEdit: component("ServicesEdit", "ServiceEdit"),
+    StaffCardList: component("StaffCardList", "StaffCardList"),
+    StaffShow: component("StaffShow", "StaffShow"),
+    StaffEdit: component("StaffEdit", "StaffEdit"),
+    BookingCardList: component("BookingCardList", "BookingCardList"),
+    BookingShow: component("BookingShow", "BookingShow"),
+    ServiceCardList: component("ServiceCardList", "ServiceCardList"),
+    ServiceShow: component("ServiceShow", "ServiceShow"),
+    ServiceEdit: component("ServiceEdit", "ServiceEdit"),
+    PackageCardList: component("PackageCardList", "PackageCardList"),
+    PackageShow: component("PackageShow", "PackageShow"),
+    PackageEdit: component("PackageEdit", "PackageEdit"),
+    ReviewCardList: component("ReviewCardList", "ReviewCardList"),
+    ReviewShow: component("ReviewShow", "ReviewShow"),
+    TransformationCardList: component("TransformationCardList", "TransformationCardList"),
+    TransformationShow: component("TransformationShow", "TransformationShow"),
+    TransformationEdit: component("TransformationEdit", "TransformationEdit"),
   };
 
   const admin = new AdminJS({
@@ -527,9 +321,6 @@ async function mountAdminPanel(app) {
     logoutPath: "/backoffice/logout",
     branding: { companyName: "Makeup Studio — Backoffice" },
     dashboard: { component: Components.Dashboard },
-    // Blanks out the "Navigation" heading AdminJS renders above the
-    // sidebar's resource list — pure UI chrome text, unrelated to the
-    // per-resource `navigation` option above.
     locale: {
       language: "en",
       translations: { en: { labels: { navigation: "" } } },
@@ -537,42 +328,18 @@ async function mountAdminPanel(app) {
     componentLoader,
     resources: [
       {
-        resource: {
-          model: getModelByName("Staff"),
-          client: prisma,
-        },
-
+        resource: { model: getModelByName("Staff"), client: prisma },
         options: {
-          // Ungroups this resource from the sidebar's default "prisma"
-          // dropdown so it appears as a flat top-level nav item.
           navigation: null,
           properties: {
-            workingHours: {
-              components: {
-                edit: Components.WorkingHoursEdit,
-              },
-            },
-
-            photoUrl: {
-              components: {
-                edit: Components.PhotoUploadEdit,
-              },
-            },
-
+            workingHours: { components: { edit: Components.WorkingHoursEdit } },
+            photoUrl: { components: { edit: Components.PhotoUploadEdit } },
             services: {
               reference: "Service",
-              // isArray must stay true — @adminjs/prisma relies on this
-              // to translate edits into a proper connect/set operation
-              // on the Staff<->Service many-to-many relation table.
-              isArray: true,
-              components: {
-                edit: Components.ServicesEdit,
-                list: Components.ServicesList,
-                show: Components.ServicesList,
-              },
+              isArray: true, // required for the many-to-many relation
+              components: { edit: Components.ServicesEdit },
             },
           },
-
           actions: {
             list: {
               after: [staffListAfter],
@@ -583,7 +350,6 @@ async function mountAdminPanel(app) {
               after: [staffRecordAfter],
               component: Components.StaffShow,
             },
-
             new: {
               before: [
                 parseWorkingHours,
@@ -593,7 +359,6 @@ async function mountAdminPanel(app) {
               after: [staffEditAfter, staffRecordAfter],
               component: Components.StaffEdit,
             },
-
             edit: {
               before: [
                 parseWorkingHours,
@@ -626,11 +391,7 @@ async function mountAdminPanel(app) {
             },
           },
           actions: {
-            // showFilter:false — AdminJS reserves a persistent filter
-            // sidebar for resources with enum-style properties (icon's
-            // availableValues here), which narrows our fully-custom list
-            // component's available width. We build our own filters
-            // in-component where needed, so this stays off everywhere.
+            // The filter sidebar (shown for enum properties) squeezes the custom list.
             list: { component: Components.ServiceCardList, showFilter: false },
             show: { component: Components.ServiceShow },
             new: {
@@ -648,14 +409,6 @@ async function mountAdminPanel(app) {
         resource: { model: getModelByName("Booking"), client: prisma },
         options: {
           navigation: null,
-          // NOTE: declaring staffId/serviceId under `properties` here does
-          // NOT make @adminjs/prisma include them in record.params — the
-          // property-driven serialization step runs first and drops them
-          // regardless of any override, so there is intentionally no
-          // `properties` block for this resource. The fix is the
-          // attachBookingIds "after" hooks wired into every action below,
-          // which write the raw values onto record.params directly, after
-          // AdminJS has already built (and mangled) its own response.
           showProperties: [
             "applicationId",
             "customerName",
@@ -673,10 +426,6 @@ async function mountAdminPanel(app) {
             "updatedAt",
           ],
           actions: {
-            // These `after: [...]` entries are the actual fix — without
-            // them, attachBookingIds/bookingListAfter/bookingRecordAfter
-            // are defined but never called, and staffId/serviceId never
-            // reach the frontend no matter what the component code does.
             list: {
               after: [bookingListAfter],
               component: Components.BookingCardList,
@@ -687,22 +436,17 @@ async function mountAdminPanel(app) {
               component: Components.BookingShow,
             },
 
-            // Editing is intentionally not exposed for Booking — all
-            // changes go through the dedicated actions below (reassign,
-            // reschedule, cancel) so each one is logged to BookingHistory
-            // and triggers the right customer notification. A generic
-            // edit form would let fields change silently.
-            new: { isVisible: false },
-            edit: { isVisible: false },
+            // All changes go through the record actions below so each one is
+            // checked, logged to BookingHistory and notified. isAccessible
+            // (not just isVisible) so the generic actions can't be called directly.
+            new: { isAccessible: false },
+            edit: { isAccessible: false },
 
             delete: {
-              // isVisible only hides it from AdminJS's default action
-              // toolbar — the action itself is still reachable, which is
-              // how the Delete button inside BookingShow/BookingCardList
-              // keeps working. Without this, AdminJS renders its own
-              // "Delete" toolbar button on top of our custom one.
+              // Hidden from the toolbar; the custom Delete button calls it.
               isVisible: false,
-              guard: "This will hide the booking from normal views but keep its history. Continue?",
+              guard:
+                "This will hide the booking from normal views but keep its history. Continue?",
               handler: async (request, response, context) => {
                 const { record, currentAdmin } = context;
                 const existing = await prisma.booking.findUnique({
@@ -717,12 +461,10 @@ async function mountAdminPanel(app) {
                 return { record: record.toJSON(currentAdmin) };
               },
             },
+
             reassignStaff: {
               actionType: "record",
               component: false,
-              // Hidden from AdminJS's default toolbar — called directly
-              // via api.recordAction() from the Reassign panel inside
-              // BookingShow / BookingCardList.
               isVisible: false,
               after: [bookingRecordAfter],
               handler: async (request, response, context) => {
@@ -748,12 +490,10 @@ async function mountAdminPanel(app) {
                 return { record: updated.toJSON(currentAdmin) };
               },
             },
+
             reschedule: {
               actionType: "record",
               component: false,
-              // Hidden from AdminJS's default toolbar — called directly
-              // via api.recordAction() from the Reschedule panel inside
-              // BookingShow / BookingCardList.
               isVisible: false,
               after: [bookingRecordAfter],
               handler: async (request, response, context) => {
@@ -762,20 +502,17 @@ async function mountAdminPanel(app) {
                 if (!startTime) throw new Error("startTime is required");
                 const existing = await prisma.booking.findUnique({
                   where: { id: record.id() },
-                  include: { service: true },
+                  include: { service: true, package: true },
                 });
                 assertBookingEditable(existing);
+                const durationMinutes =
+                  existing.package?.durationMinutes ?? existing.service?.durationMinutes;
+                if (!durationMinutes) throw new Error("Unable to determine booking duration");
                 const newStart = new Date(startTime);
-                const newEnd = new Date(
-                  newStart.getTime() + existing.service.durationMinutes * 60 * 1000,
-                );
+                const newEnd = new Date(newStart.getTime() + durationMinutes * 60 * 1000);
                 await prisma.booking.update({
                   where: { id: record.id() },
-                  data: {
-                    startTime: newStart,
-                    endTime: newEnd,
-                    status: "rescheduled",
-                  },
+                  data: { startTime: newStart, endTime: newEnd, status: "rescheduled" },
                 });
                 await logAndNotify(
                   record.id(),
@@ -788,12 +525,10 @@ async function mountAdminPanel(app) {
                 return { record: updated.toJSON(currentAdmin) };
               },
             },
+
             cancelBooking: {
               actionType: "record",
               component: false,
-              // Hidden from AdminJS's default toolbar — called directly
-              // via api.recordAction() from the Cancel button inside
-              // BookingShow / BookingCardList.
               isVisible: false,
               after: [bookingRecordAfter],
               handler: async (request, response, context) => {
@@ -826,11 +561,7 @@ async function mountAdminPanel(app) {
           navigation: null,
           properties: {
             imageUrl: { components: { edit: Components.PhotoUploadEdit } },
-            services: {
-              reference: "Service",
-              // isArray must stay true — same reasoning as Staff.services.
-              isArray: true,
-            },
+            services: { reference: "Service", isArray: true },
           },
           actions: {
             list: {
@@ -855,23 +586,6 @@ async function mountAdminPanel(app) {
           },
         },
       },
-      // {
-      //   resource: { model: getModelByName("BookingHistory"), client: prisma },
-      //   options: {
-      //     navigation: null,
-      //     // Audit log — view only, never hand-edited.
-      //     actions: {
-      //       list: {
-      //         component: Components.BookingHistoryCardList,
-      //         showFilter: false,
-      //       },
-      //       show: { component: Components.BookingHistoryShow },
-      //       new: { isVisible: false },
-      //       edit: { isVisible: false },
-      //       delete: { isVisible: false },
-      //     },
-      //   },
-      // },
       {
         resource: { model: getModelByName("Transformation"), client: prisma },
         options: {
@@ -881,10 +595,7 @@ async function mountAdminPanel(app) {
             afterUrl: { components: { edit: Components.PhotoUploadEdit } },
           },
           actions: {
-            list: {
-              component: Components.TransformationCardList,
-              showFilter: false,
-            },
+            list: { component: Components.TransformationCardList, showFilter: false },
             show: { component: Components.TransformationShow },
             new: {
               before: [
@@ -910,11 +621,10 @@ async function mountAdminPanel(app) {
           actions: {
             list: { component: Components.ReviewCardList, showFilter: false },
             show: { component: Components.ReviewShow },
-            // Reviews are never hand-edited — rating/comment/booking are
-            // all set by the customer. Only order and visibility can
-            // change, via the two hidden actions below.
-            new: { isVisible: false },
-            edit: { isVisible: false },
+            // Review content comes from customers; admins only change order
+            // and visibility through the actions below.
+            new: { isAccessible: false },
+            edit: { isAccessible: false },
             reorder: {
               actionType: "record",
               component: false,
@@ -933,26 +643,16 @@ async function mountAdminPanel(app) {
     ],
   });
 
-  // AdminJS doesn't bundle custom components just because they're in the
-  // ComponentLoader — you have to explicitly kick off bundling. In dev,
-  // watch() bundles once and rebuilds on file changes; in prod, initialize()
-  // bundles once at boot. Skipping this is what causes:
-  //   "Component X has not been bundled, ensure it was added to your
-  //    ComponentLoader instance"
+  // Production images ship a prebuilt bundle (ADMIN_JS_SKIP_BUNDLE=true), so
+  // initialize() is a no-op there; watch() rebuilds on change in dev.
   if (process.env.NODE_ENV === "production") {
     await admin.initialize();
   } else {
     await admin.watch();
   }
 
-  // Logs in against the same AdminUser table / bcrypt hash used by your
-  // POST /admin/auth/login endpoint — one set of admin credentials for both.
   const authenticate = async (email, password) => {
     const user = await prisma.adminUser.findUnique({ where: { email } });
-    // Always run bcrypt.compare, even when the user doesn't exist — against
-    // a fixed dummy hash in that case — so a nonexistent email doesn't
-    // resolve faster than a real one and leak which admin emails exist via
-    // response timing.
     const valid = await bcrypt.compare(password, user?.passwordHash || DUMMY_ADMIN_HASH);
     return user && valid ? { email: user.email, id: user.id } : null;
   };
@@ -963,21 +663,19 @@ async function mountAdminPanel(app) {
       authenticate,
       cookiePassword: process.env.ADMIN_SESSION_SECRET,
     },
-    null, // no pre-built router — let AdminJSExpress create one
+    null,
     {
-      // express-session options. Sessions live in Redis so every
-      // backend task/replica sees the same login — an in-memory store
-      // would log the admin out whenever a request hit another task.
+      // Sessions live in Redis so a login is valid on every replica.
       store: new RedisStore({ client: redis, prefix: "salon:sess:" }),
       name: "salon.sid",
-      proxy: true, // trust X-Forwarded-Proto from the ALB/nginx for secure cookies
+      proxy: true,
       resave: false,
       saveUninitialized: false,
       secret: process.env.ADMIN_SESSION_SECRET,
       cookie: {
         httpOnly: true,
         sameSite: "lax",
-        secure: cookieSecure, // false locally (http), true in ECS (https via ALB)
+        secure: cookieSecure,
       },
     },
   );

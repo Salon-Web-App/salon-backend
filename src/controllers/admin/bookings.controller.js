@@ -2,7 +2,6 @@
 // change status, and reschedule. Every mutation logs to BookingHistory and
 // enqueues a customer notification, mirroring the customer-facing flow.
 const prisma = require("../../lib/prisma");
-const bookingService = require("../../services/booking.service");
 const { enqueueNotification } = require("../../jobs/queue");
 
 async function list(req, res, next) {
