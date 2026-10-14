@@ -19,6 +19,18 @@ RUN --mount=type=cache,target=/root/.npm \
 COPY prisma ./prisma
 RUN npx prisma generate
 
+FROM deps-prod AS admin-bundle
+COPY scripts ./scripts
+COPY src ./src
+# Placeholder values only to satisfy config validation; nothing connects.
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build \
+    REDIS_URL=redis://localhost:6379 \
+    ADMIN_SESSION_SECRET=build JWT_SECRET=build \
+    FRONTEND_ORIGIN=http://localhost \
+    CLOUDINARY_CLOUD_NAME=build CLOUDINARY_API_KEY=build CLOUDINARY_API_SECRET=build \
+    node scripts/bundle-admin.js \
+ && test -s .adminjs/bundle.js
+
 FROM base AS dev
 ENV NODE_ENV=development
 COPY package.json package-lock.json ./
@@ -42,11 +54,10 @@ COPY prisma ./prisma
 COPY scripts ./scripts
 COPY src ./src
 
-# Code stays root-owned; only .adminjs is writable because AdminJS writes
-# its component bundle there at startup.
-RUN addgroup -S app && adduser -S -G app app \
- && mkdir -p /app/.adminjs \
- && chown app:app /app/.adminjs
+COPY --from=admin-bundle /app/.adminjs ./.adminjs
+ENV ADMIN_JS_SKIP_BUNDLE=true
+
+RUN addgroup -S app && adduser -S -G app app
 
 USER app
 EXPOSE 3000
